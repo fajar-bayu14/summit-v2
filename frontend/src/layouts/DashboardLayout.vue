@@ -140,20 +140,22 @@ async function handleLogout() {
       </div>
 
       <!-- Dynamic Role-Filtered Navigation Links -->
-      <div class="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        <div v-for="(group, gIdx) in filteredNavigation" :key="gIdx" class="space-y-1">
-          <p
+      <div class="flex-1 overflow-y-auto py-3 px-3 space-y-4">
+        <div v-for="(group, gIdx) in filteredNavigation" :key="gIdx" class="space-y-0.5">
+          <div
             v-if="group.heading && !isSidebarCollapsed"
-            class="px-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2"
+            class="px-3 pt-2.5 pb-1 flex items-center"
           >
-            {{ group.heading }}
-          </p>
-          <div class="space-y-1">
+            <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 dark:text-muted-foreground/60 select-none">
+              {{ group.heading }}
+            </span>
+          </div>
+          <div class="space-y-0.5">
             <router-link
               v-for="item in group.items"
               :key="item.title"
               :to="item.to"
-              class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative group"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors relative group"
               :class="[
                 isItemActive(item)
                   ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
@@ -241,36 +243,40 @@ async function handleLogout() {
       </div>
 
       <!-- Mobile Navigation Links -->
-      <div class="flex-1 overflow-y-auto p-4 space-y-6">
-        <div v-for="(group, gIdx) in filteredNavigation" :key="gIdx" class="space-y-1">
-          <p
+      <div class="flex-1 overflow-y-auto p-3 space-y-4">
+        <div v-for="(group, gIdx) in filteredNavigation" :key="gIdx" class="space-y-0.5">
+          <div
             v-if="group.heading"
-            class="px-3 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2"
+            class="px-3 pt-2.5 pb-1 flex items-center"
           >
-            {{ group.heading }}
-          </p>
-          <router-link
-            v-for="item in group.items"
-            :key="item.title"
-            :to="item.to"
-            @click="isMobileMenuOpen = false"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
-            :class="[
-              isItemActive(item)
-                ? 'bg-primary text-primary-foreground font-semibold'
-                : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
-            ]"
-          >
-            <component :is="item.icon" class="h-4 w-4" />
-            <span class="flex-1">{{ item.title }}</span>
-            <Badge
-              v-if="item.badge"
-              :variant="item.badgeVariant || 'secondary'"
-              class="text-[10px]"
+            <span class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70 dark:text-muted-foreground/60 select-none">
+              {{ group.heading }}
+            </span>
+          </div>
+          <div class="space-y-0.5">
+            <router-link
+              v-for="item in group.items"
+              :key="item.title"
+              :to="item.to"
+              @click="isMobileMenuOpen = false"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-colors"
+              :class="[
+                isItemActive(item)
+                  ? 'bg-primary text-primary-foreground font-semibold'
+                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+              ]"
             >
-              {{ item.badge }}
-            </Badge>
-          </router-link>
+              <component :is="item.icon" class="h-4 w-4" />
+              <span class="flex-1">{{ item.title }}</span>
+              <Badge
+                v-if="item.badge"
+                :variant="item.badgeVariant || 'secondary'"
+                class="text-[10px]"
+              >
+                {{ item.badge }}
+              </Badge>
+            </router-link>
+          </div>
         </div>
       </div>
 
