@@ -1,0 +1,7 @@
+# Build and temporary graphify files
+graphify-out/
+
+# OS files
+.DS_Store
+Thumbs.db
+dump-file/

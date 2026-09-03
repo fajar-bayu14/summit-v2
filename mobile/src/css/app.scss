@@ -1,0 +1,16 @@
+// app global css
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+  font-family: 'Inter', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+:root {
+  --summit-background: #f8f9fa;
+  --summit-surface: #ffffff;
+  --summit-surface-container: #eeeeeb;
+  --summit-text-primary: #111827;
+  --summit-text-secondary: #6b7280;
+  --summit-border: #e5e7eb;
+}

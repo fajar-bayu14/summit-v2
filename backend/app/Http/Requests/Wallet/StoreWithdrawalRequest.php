@@ -1,0 +1,30 @@
+<?php
+
+namespace App\Http\Requests\Wallet;
+
+use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreWithdrawalRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return $this->user() && $this->user()->role === 'mitra';
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'nominal' => ['required', 'numeric', 'min:50000'],
+            'catatan' => ['nullable', 'string', 'max:500'],
+        ];
+    }
+}

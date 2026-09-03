@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "shadcnVue": {
+      "type": "local",
+      "enabled": true,
+      "command": [
+        "npx",
+        "shadcn-vue@latest",
+        "mcp"
+      ]
+    }
+}
