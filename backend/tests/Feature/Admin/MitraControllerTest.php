@@ -6,12 +6,12 @@ use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 
 uses(LazilyRefreshDatabase::class);
 
-test('admin can list mitras', function () {
+test('admin can list mitras with search and status filter', function () {
     $admin = User::factory()->create(['role' => 'admin']);
 
-    $userMitra = User::factory()->create(['role' => 'mitra', 'name' => 'Budi Santoso']);
-    $mitra = Mitra::create([
-        'user_id' => $userMitra->id,
+    $user1 = User::factory()->create(['role' => 'mitra', 'name' => 'Budi Santoso', 'email' => 'budi@summit.id']);
+    $mitra1 = Mitra::create([
+        'user_id' => $user1->id,
         'nama_pemilik' => 'Budi Santoso',
         'telepon' => '081234567890',
         'alamat' => 'Jl. Raya Summit No. 10',
@@ -25,11 +25,33 @@ test('admin can list mitras', function () {
         'ewallet' => '081234567890',
     ]);
 
-    $response = $this->actingAs($admin)->getJson(route('admin.mitra.index'));
+    $user2 = User::factory()->create(['role' => 'mitra', 'name' => 'Siti Rahma', 'email' => 'siti@summit.id']);
+    $mitra2 = Mitra::create([
+        'user_id' => $user2->id,
+        'nama_pemilik' => 'Siti Rahma',
+        'telepon' => '081987654321',
+        'alamat' => 'Jl. Lawu Indah No. 3',
+        'deskripsi' => 'Mitra Lawu',
+        'status' => 'suspend',
+        'npwp' => '12.345.678.9-012.999',
+        'nik' => '3201234567890099',
+        'rekening_bank' => '9999888877',
+        'nama_rekening' => 'Siti Rahma',
+        'bank' => 'Bank BRI',
+        'ewallet' => '081987654321',
+    ]);
 
-    $response->assertStatus(200);
-    $response->assertJsonPath('data.data.0.id', $mitra->id);
-    $response->assertJsonPath('data.data.0.nama_pemilik', 'Budi Santoso');
+    // Search by name
+    $responseSearch = $this->actingAs($admin)->getJson(route('admin.mitra.index', ['search' => 'Siti']));
+    $responseSearch->assertStatus(200);
+    $responseSearch->assertJsonPath('data.data.0.id', $mitra2->id);
+    expect($responseSearch->json('data.data'))->toHaveCount(1);
+
+    // Filter by status suspend
+    $responseStatus = $this->actingAs($admin)->getJson(route('admin.mitra.index', ['status' => 'suspend']));
+    $responseStatus->assertStatus(200);
+    $responseStatus->assertJsonPath('data.data.0.id', $mitra2->id);
+    expect($responseStatus->json('data.data'))->toHaveCount(1);
 });
 
 test('admin can create a new mitra and user account', function () {

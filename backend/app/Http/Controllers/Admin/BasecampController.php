@@ -39,7 +39,34 @@ class BasecampController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $basecamps = Basecamp::with(['mitra.user', 'jalur'])->paginate(15);
+        $query = Basecamp::with(['mitra.user', 'jalur.gunung']);
+
+        if ($request->filled('search')) {
+            $search = $request->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_basecamp', 'like', "%{$search}%")
+                    ->orWhereHas('mitra', function ($mq) use ($search) {
+                        $mq->where('nama_pemilik', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('jalur', function ($jq) use ($search) {
+                        $jq->where('nama_jalur', 'like', "%{$search}%")
+                            ->orWhereHas('gunung', function ($gq) use ($search) {
+                                $gq->where('nama_gunung', 'like', "%{$search}%");
+                            });
+                    });
+            });
+        }
+
+        if ($request->filled('mitra_id')) {
+            $query->where('mitra_id', $request->query('mitra_id'));
+        }
+
+        if ($request->filled('jalur_id')) {
+            $query->where('jalur_id', $request->query('jalur_id'));
+        }
+
+        $perPage = (int) $request->query('per_page', 15);
+        $basecamps = $query->latest()->paginate($perPage);
 
         return response()->json([
             'status' => 'success',
@@ -122,7 +149,7 @@ class BasecampController extends Controller
     )]
     public function show(int $id): JsonResponse
     {
-        $basecamp = Basecamp::with(['mitra.user', 'jalur', 'produks.opentrip', 'produks.tiket.kuotas'])->findOrFail($id);
+        $basecamp = Basecamp::with(['mitra.user', 'jalur.gunung', 'produks.opentrip', 'produks.tiket.kuotas'])->findOrFail($id);
 
         return response()->json([
             'status' => 'success',

@@ -41,7 +41,29 @@ class MitraController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $mitras = Mitra::with('user')->paginate(15);
+        $query = Mitra::with(['user', 'basecamps.jalur.gunung']);
+
+        if ($request->filled('search')) {
+            $search = $request->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_pemilik', 'like', "%{$search}%")
+                    ->orWhere('telepon', 'like', "%{$search}%")
+                    ->orWhere('bank', 'like', "%{$search}%")
+                    ->orWhere('rekening_bank', 'like', "%{$search}%")
+                    ->orWhere('nik', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('email', 'like', "%{$search}%")
+                            ->orWhere('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->query('status'));
+        }
+
+        $perPage = (int) $request->query('per_page', 15);
+        $mitras = $query->latest()->paginate($perPage);
 
         return response()->json([
             'status' => 'success',
@@ -149,7 +171,7 @@ class MitraController extends Controller
     )]
     public function show(int $id): JsonResponse
     {
-        $mitra = Mitra::with('user')->findOrFail($id);
+        $mitra = Mitra::with(['user', 'basecamps.jalur.gunung', 'staff'])->findOrFail($id);
 
         return response()->json([
             'status' => 'success',

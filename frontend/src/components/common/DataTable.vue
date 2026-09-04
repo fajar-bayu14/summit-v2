@@ -135,14 +135,16 @@ function getAlignmentClass(align?: 'left' | 'center' | 'right') {
                   :key="col.key"
                   :class="[getAlignmentClass(col.align), col.cellClass || '']"
                 >
-                  <!-- Custom Slot for Column Key -->
-                  <slot :name="`cell(${col.key})`" :row="row" :value="row[col.key]" :index="rowIndex">
-                    <template v-if="col.formatter">
-                      {{ col.formatter(row) }}
-                    </template>
-                    <template v-else>
-                      {{ row[col.key] !== undefined && row[col.key] !== null ? row[col.key] : '-' }}
-                    </template>
+                  <!-- Custom Slot for Column Key (Supports both #cell(key) and #cell-key) -->
+                  <slot :name="`cell(${col.key})`" :row="row" :item="row" :value="row[col.key]" :index="rowIndex">
+                    <slot :name="`cell-${col.key}`" :row="row" :item="row" :value="row[col.key]" :index="rowIndex">
+                      <template v-if="col.formatter">
+                        {{ col.formatter(row) }}
+                      </template>
+                      <template v-else>
+                        {{ row[col.key] !== undefined && row[col.key] !== null ? row[col.key] : '-' }}
+                      </template>
+                    </slot>
                   </slot>
                 </TableCell>
               </TableRow>

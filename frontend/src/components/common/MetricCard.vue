@@ -7,13 +7,14 @@ const props = withDefaults(
   defineProps<{
     title: string
     value: string | number
-    icon: any
+    icon?: any
     change?: string
     trend?: 'up' | 'down' | 'neutral'
     description?: string
     iconClass?: string
   }>(),
   {
+    icon: undefined,
     change: '',
     trend: 'neutral',
     description: '',
@@ -33,7 +34,7 @@ const trendColorClass = computed(() => {
     <CardContent class="p-5">
       <div class="flex items-center justify-between gap-2 mb-3">
         <span class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{{ title }}</span>
-        <div class="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" :class="iconClass">
+        <div v-if="icon" class="h-10 w-10 rounded-xl flex items-center justify-center shrink-0" :class="iconClass">
           <component :is="icon" class="h-5 w-5 stroke-[2]" />
         </div>
       </div>

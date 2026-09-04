@@ -169,42 +169,42 @@ Modul pengelolaan direktori gunung nasional, jalur pendakian resmi, dan kontrol 
 ---
 
 ## 🤝 [MODUL 03: MASTER KEMITRAAN — MITRA & PEMETAAN BASECAMP]
-Status Modul: `[ ] In Progress` | `[ ] Module Verification Passed`
+Status Modul: `[x] Completed` | `[x] Module Verification Passed`
 
 Modul tata kelola data mitra pengelola basecamp, pembuatan akun akses mitra, dan pemetaan basecamp operasional ke jalur pendakian.
 
 #### Task Breakdown:
-- [ ] **Task 3.1: Partner (Mitra) Management & Account Provisioning**
-  - [ ] Implementasi Kode Selesai:
-    - Service `partnerService.ts`
+- [x] **Task 3.1: Partner (Mitra) Management & Account Provisioning**
+  - [x] Implementasi Kode Selesai:
+    - Service `src/api/partner.ts` & Types `src/types/partner.ts`
     - Data Table Mitra (Nama Pemilik, Akun Email, Telepon, Status, Data Rekening Bank/E-Wallet)
     - Modal Create Mitra: Pembuatan akun auth login (`email`, `password`) sekaligus profil bisnis dalam 1 form terpadu
     - Modal Edit Mitra & Status Switcher (`aktif` / `suspend`)
-  - [ ] Unit/Component Test Passed
-  - [ ] Integration Test (Hit `GET /api/v1/admin/partners` & `POST /api/v1/admin/partners`) Passed
-  - Status: `[PENDING]`
+  - [x] Unit/Component Test Passed
+  - [x] Integration Test (Hit `GET /api/v1/admin/partners` & `POST /api/v1/admin/partners`) Passed
+  - Status: `[TESTED & PASSED]`
 
-- [ ] **Task 3.2: Basecamp Directory & Trail Mapping**
-  - [ ] Implementasi Kode Selesai:
-    - Service `basecampService.ts`
+- [x] **Task 3.2: Basecamp Directory & Trail Mapping**
+  - [x] Implementasi Kode Selesai:
+    - Service `src/api/basecamp.ts` & Types `src/types/basecamp.ts`
     - Data Table Basecamp: Nama Basecamp, Mitra Pengelola, Jalur Terkait, Koordinat GPS, Jam Operasional
     - Modal Form Create & Edit Basecamp (Dropdown dinamis Mitra & Jalur, Input Lat/Long, Jam Buka/Tutup)
-  - [ ] Unit/Component Test Passed
-  - [ ] Integration Test (Hit `GET /api/v1/admin/basecamps` & `POST /api/v1/admin/basecamps`) Passed
-  - Status: `[PENDING]`
+  - [x] Unit/Component Test Passed
+  - [x] Integration Test (Hit `GET /api/v1/admin/basecamps` & `POST /api/v1/admin/basecamps`) Passed
+  - Status: `[TESTED & PASSED]`
 
-- [ ] **Task 3.3: Partner & Basecamp Detail Drawer / View**
-  - [ ] Implementasi Kode Selesai:
-    - Side Drawer detail informasi mitra (Daftar basecamp yang dikelola, riwayat rekening, total produk terdaftar)
+- [x] **Task 3.3: Partner & Basecamp Detail Drawer / View**
+  - [x] Implementasi Kode Selesai:
+    - Side Drawer detail informasi mitra (Daftar basecamp yang dikelola, riwayat rekening, total staf terdaftar)
     - Modal konfirmasi Delete mitra (Validasi cascading dependency)
-  - [ ] Unit/Component Test Passed
-  - [ ] Integration Test (Hit `GET /api/v1/admin/partners/{id}`) Passed
-  - Status: `[PENDING]`
+  - [x] Unit/Component Test Passed
+  - [x] Integration Test (Hit `GET /api/v1/admin/partners/{id}`) Passed
+  - Status: `[TESTED & PASSED]`
 
 #### Module-Level Acceptance Gate:
-- [ ] Seluruh sub-task Modul 03 berstatus `[TESTED & PASSED]`
-- [ ] End-to-End User Flow (Daftarkan Mitra baru -> Akun login ter-create -> Petakan Basecamp baru ke Jalur Gunung) teruji tanpa error foreign key
-- [ ] Modul siap di-merge ke branch staging
+- [x] Seluruh sub-task Modul 03 berstatus `[TESTED & PASSED]`
+- [x] End-to-End User Flow (Daftarkan Mitra baru -> Akun login ter-create -> Petakan Basecamp baru ke Jalur Gunung) teruji tanpa error foreign key
+- [x] Modul siap di-merge ke branch staging
 
 ---
 

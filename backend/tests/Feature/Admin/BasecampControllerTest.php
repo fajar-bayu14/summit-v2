@@ -50,8 +50,8 @@ beforeEach(function () {
     ]);
 });
 
-test('admin can list basecamps', function () {
-    $basecamp = Basecamp::create([
+test('admin can list basecamps with search and filter', function () {
+    $basecamp1 = Basecamp::create([
         'mitra_id' => $this->mitra->id,
         'jalur_id' => $this->jalur->id,
         'nama_basecamp' => 'Basecamp Cibodas Indah',
@@ -60,11 +60,47 @@ test('admin can list basecamps', function () {
         'jam_operasional' => '24 Jam',
     ]);
 
-    $response = $this->actingAs($this->admin)->getJson(route('admin.basecamp.index'));
+    $gunung2 = Gunung::create([
+        'nama_gunung' => 'Gunung Merbabu',
+        'deskripsi' => 'Gunung Jawa Tengah.',
+        'tinggi_mdpl' => 3145,
+        'lokasi' => 'Boyolali, Jawa Tengah',
+        'foto' => 'gunungs/merbabu.jpg',
+        'status' => 'aktif',
+    ]);
 
-    $response->assertStatus(200);
-    $response->assertJsonPath('data.data.0.id', $basecamp->id);
-    $response->assertJsonPath('data.data.0.nama_basecamp', 'Basecamp Cibodas Indah');
+    $jalur2 = JalurPendakian::create([
+        'gunung_id' => $gunung2->id,
+        'nama_jalur' => 'Jalur Selo',
+        'deskripsi' => 'Jalur sabana.',
+        'titik_awal_mdpl' => '1600 MDPL',
+        'titik_akhir_mdpl' => '3145 MDPL',
+        'waktu_tempuh' => '6 Jam',
+        'status' => 'open',
+        'panjang_jalur' => '8.5 Km',
+        'tingkat_kesulitan' => 'sedang',
+    ]);
+
+    $basecamp2 = Basecamp::create([
+        'mitra_id' => $this->mitra->id,
+        'jalur_id' => $jalur2->id,
+        'nama_basecamp' => 'Basecamp Merbabu Selo Permai',
+        'latitude' => '-7.441234',
+        'longitude' => '110.421234',
+        'jam_operasional' => '07:00 - 22:00',
+    ]);
+
+    // Search by basecamp name
+    $responseSearch = $this->actingAs($this->admin)->getJson(route('admin.basecamp.index', ['search' => 'Selo']));
+    $responseSearch->assertStatus(200);
+    $responseSearch->assertJsonPath('data.data.0.id', $basecamp2->id);
+    expect($responseSearch->json('data.data'))->toHaveCount(1);
+
+    // Filter by jalur_id
+    $responseFilter = $this->actingAs($this->admin)->getJson(route('admin.basecamp.index', ['jalur_id' => $this->jalur->id]));
+    $responseFilter->assertStatus(200);
+    $responseFilter->assertJsonPath('data.data.0.id', $basecamp1->id);
+    expect($responseFilter->json('data.data'))->toHaveCount(1);
 });
 
 test('admin can create a basecamp', function () {

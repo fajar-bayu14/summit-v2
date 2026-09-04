@@ -105,13 +105,13 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'partners',
         name: 'admin.partners',
-        component: () => import('@/views/admin/AdminDashboardView.vue'),
+        component: () => import('@/views/admin/PartnerListView.vue'),
         meta: { title: 'Mitra Basecamp - Summit', roles: ['admin'] },
       },
       {
         path: 'basecamps',
         name: 'admin.basecamps',
-        component: () => import('@/views/admin/AdminDashboardView.vue'),
+        component: () => import('@/views/admin/BasecampListView.vue'),
         meta: { title: 'Pemetaan Basecamp - Summit', roles: ['admin'] },
       },
       {
