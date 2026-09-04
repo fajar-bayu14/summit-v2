@@ -209,31 +209,32 @@ Modul tata kelola data mitra pengelola basecamp, pembuatan akun akses mitra, dan
 ---
 
 ## 📦 [MODUL 04: MONITORING PRODUK & KUOTA HARIAN BASECAMP]
-Status Modul: `[ ] In Progress` | `[ ] Module Verification Passed`
+Status Modul: `[x] Completed` | `[x] Module Verification Passed`
 
-Modul supervisi dan monitoring katalog produk (tiket pendakian, paket open trip, alat sewa, porter/guide) lintas basecamp.
+Modul supervisi dan monitoring katalog produk (tiket pendakian, paket open trip, alat sewa, porter/guide) berbasis pengelompokan Mitra & Basecamp terpadu.
 
 #### Task Breakdown:
-- [ ] **Task 4.1: Cross-Basecamp Product Monitoring Table**
-  - [ ] Implementasi Kode Selesai:
-    - Service `productService.ts`
-    - Data Table produk dengan filter dropdown `basecamp_id` & search
-    - Kolom: Nama Produk, Basecamp, Kategori Produk, Harga, Status Ketersediaan
-  - [ ] Unit/Component Test Passed
-  - [ ] Integration Test (Hit `GET /api/v1/admin/products`) Passed
-  - Status: `[PENDING]`
+- [x] **Task 4.1: Cross-Basecamp Product Monitoring Table & Partner Catalog**
+  - [x] Implementasi Kode Selesai:
+    - Service `product.ts` & types `types/product.ts`
+    - View `ProductListView.vue` dengan Dual View Toggle: **Katalog Berbasis Mitra (Grouped Grid)** & **Tabel Data (List View)**
+    - Multi-parameter filter: `search`, `mitra_id`, `kategori`, `is_active`
+    - Kolom: Nama Produk, Mitra Pengelola, Basecamp & Jalur, Kategori, Harga/Satuan, Stok/Kuota, Status
+  - [x] Unit/Component Test Passed
+  - [x] Integration Test (Hit `GET /api/v1/admin/products`) Passed
+  - Status: `[TESTED & PASSED]`
 
-- [ ] **Task 4.2: Product Details & Daily Quota Inspector**
-  - [ ] Implementasi Kode Selesai:
-    - Modal/Drawer detail produk: Rincian kuota harian tiket, jadwal open trip, atau spesifikasi sewa alat
-  - [ ] Unit/Component Test Passed
-  - [ ] Integration Test (Hit `GET /api/v1/admin/products/{id}`) Passed
-  - Status: `[PENDING]`
+- [x] **Task 4.2: Product Details & Daily Quota Inspector**
+  - [x] Implementasi Kode Selesai:
+    - Modal/Drawer detail produk `ProductDetailInspectorModal.vue`: Rincian kuota harian tiket, jadwal open trip, spesifikasi sewa alat, dan profil mitra pengelola
+  - [x] Unit/Component Test Passed
+  - [x] Integration Test (Hit `GET /api/v1/admin/products/{id}`) Passed
+  - Status: `[TESTED & PASSED]`
 
 #### Module-Level Acceptance Gate:
-- [ ] Seluruh sub-task Modul 04 berstatus `[TESTED & PASSED]`
-- [ ] Monitoring kuota tiket dan ketersediaan logistik mitra berfungsi secara real-time
-- [ ] Modul siap di-merge ke branch staging
+- [x] Seluruh sub-task Modul 04 berstatus `[TESTED & PASSED]`
+- [x] Monitoring kuota tiket dan ketersediaan logistik mitra berfungsi secara real-time dan terpisah rapi per mitra
+- [x] Modul siap di-merge ke branch staging
 
 ---
 

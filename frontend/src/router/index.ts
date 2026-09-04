@@ -117,8 +117,8 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'products',
         name: 'admin.products',
-        component: () => import('@/views/admin/AdminDashboardView.vue'),
-        meta: { title: 'Monitoring Produk - Summit', roles: ['admin'] },
+        component: () => import('@/views/admin/ProductListView.vue'),
+        meta: { title: 'Monitoring Produk & Kuota - Summit', roles: ['admin'] },
       },
       {
         path: 'withdrawals',

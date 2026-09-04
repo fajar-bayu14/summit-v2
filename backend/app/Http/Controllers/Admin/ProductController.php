@@ -17,7 +17,12 @@ class ProductController extends Controller
         tags: ['Product (Admin)'],
         security: [['sanctum' => []]],
         parameters: [
+            new OA\Parameter(name: 'mitra_id', in: 'query', description: 'Filter products by mitra ID', required: false, schema: new OA\Schema(type: 'integer')),
             new OA\Parameter(name: 'basecamp_id', in: 'query', description: 'Filter products by basecamp ID', required: false, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'kategori', in: 'query', description: 'Filter products by category', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'search', in: 'query', description: 'Search products by name, description, basecamp, or partner', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'is_active', in: 'query', description: 'Filter by active status', required: false, schema: new OA\Schema(type: 'boolean')),
+            new OA\Parameter(name: 'per_page', in: 'query', description: 'Number of items per page (max 100)', required: false, schema: new OA\Schema(type: 'integer', default: 15)),
             new OA\Parameter(name: 'page', in: 'query', description: 'Page number for pagination', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
         ],
         responses: [
@@ -38,13 +43,46 @@ class ProductController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $query = Produk::query()->with(['basecamp.mitra', 'opentrip', 'tiket.kuotas']);
+        $query = Produk::query()->with(['basecamp.mitra', 'basecamp.jalur.gunung', 'opentrip', 'tiket.kuotas']);
 
         if ($request->filled('basecamp_id')) {
             $query->where('basecamp_id', $request->query('basecamp_id'));
         }
 
-        $products = $query->paginate(15);
+        if ($request->filled('mitra_id')) {
+            $query->whereHas('basecamp', function ($q) use ($request) {
+                $q->where('mitra_id', $request->query('mitra_id'));
+            });
+        }
+
+        if ($request->filled('kategori')) {
+            $query->where('kategori', $request->query('kategori'));
+        }
+
+        if ($request->has('is_active') && $request->query('is_active') !== null && $request->query('is_active') !== '') {
+            $query->where('is_active', filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->query('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('nama_produk', 'like', "%{$search}%")
+                    ->orWhere('deskripsi', 'like', "%{$search}%")
+                    ->orWhereHas('basecamp', function ($bq) use ($search) {
+                        $bq->where('nama_basecamp', 'like', "%{$search}%")
+                            ->orWhereHas('mitra', function ($mq) use ($search) {
+                                $mq->where('nama_pemilik', 'like', "%{$search}%");
+                            });
+                    });
+            });
+        }
+
+        $perPage = min((int) $request->query('per_page', 15), 100);
+        if ($perPage <= 0) {
+            $perPage = 15;
+        }
+
+        $products = $query->latest('id')->paginate($perPage);
 
         return response()->json([
             'status' => 'success',
@@ -80,7 +118,7 @@ class ProductController extends Controller
     )]
     public function show(int $id): JsonResponse
     {
-        $produk = Produk::with(['basecamp.mitra', 'opentrip', 'tiket.kuotas'])->findOrFail($id);
+        $produk = Produk::with(['basecamp.mitra', 'basecamp.jalur.gunung', 'opentrip', 'tiket.kuotas'])->findOrFail($id);
 
         return response()->json([
             'status' => 'success',
