@@ -41,6 +41,16 @@ class Basecamp extends Model
     }
 
     /**
+     * Get the staff members assigned to this basecamp.
+     *
+     * @return HasMany<MitraStaff>
+     */
+    public function staff(): HasMany
+    {
+        return $this->hasMany(MitraStaff::class, 'basecamp_id');
+    }
+
+    /**
      * Get the orders placed at this basecamp.
      *
      * @return HasMany<Pesanan>

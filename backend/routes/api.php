@@ -12,9 +12,12 @@ use App\Http\Controllers\Admin\WithdrawalController as AdminWithdrawalController
 use App\Http\Controllers\Ads\BannerAdController as PublicBannerAdController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\Mitra\AnalyticsController as MitraAnalyticsController;
+use App\Http\Controllers\Mitra\BasecampController as MitraBasecampController;
 use App\Http\Controllers\Mitra\LogbookController as MitraLogbookController;
 use App\Http\Controllers\Mitra\PesananController as MitraPesananController;
 use App\Http\Controllers\Mitra\ProductController as MitraProductController;
+use App\Http\Controllers\Mitra\ProfileController as MitraProfileController;
 use App\Http\Controllers\Mitra\RefundController as MitraRefundController;
 use App\Http\Controllers\Mitra\StaffController as MitraStaffController;
 use App\Http\Controllers\Mitra\TrailController as MitraTrailController;
@@ -156,6 +159,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Mitra endpoints (guarded by role:mitra)
     Route::middleware(['role:mitra'])->prefix('mitra')->group(function () {
+        Route::put('/profile', [MitraProfileController::class, 'update'])->name('mitra.profile.update');
+
         Route::get('/products', [MitraProductController::class, 'index'])->name('mitra.products.index');
         Route::post('/products', [MitraProductController::class, 'store'])->name('mitra.products.store');
         Route::get('/products/{id}', [MitraProductController::class, 'show'])->name('mitra.products.show');
@@ -169,6 +174,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // Trail emergency closure for Mitra
         Route::post('/trails/{id}/emergency-close', [MitraTrailController::class, 'emergencyClose'])->name('mitra.trails.emergency-close');
+
+        // Basecamp Management for Mitra
+        Route::get('/basecamps', [MitraBasecampController::class, 'index'])->name('mitra.basecamp.index');
+        Route::get('/basecamps/{id}', [MitraBasecampController::class, 'show'])->name('mitra.basecamp.show');
+        Route::put('/basecamps/{id}', [MitraBasecampController::class, 'update'])->name('mitra.basecamp.update');
 
         // Staff Management for Mitra
         Route::get('/staff', [MitraStaffController::class, 'index'])->name('mitra.staff.index');
@@ -189,7 +199,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
         // Order Management for Mitra
         Route::get('/orders', [MitraPesananController::class, 'index'])->name('mitra.pesanan.index');
+        Route::post('/orders/check-in', [MitraPesananController::class, 'checkInByCode'])->name('mitra.pesanan.check-in-code');
         Route::get('/orders/{id}', [MitraPesananController::class, 'show'])->name('mitra.pesanan.show');
+        Route::post('/orders/{id}/check-in', [MitraPesananController::class, 'checkIn'])->name('mitra.pesanan.check-in');
         Route::patch('/orders/{pesananId}/items/{itemId}', [MitraPesananController::class, 'updateItemStatus'])->name('mitra.pesanan.update-item');
 
         // Refund Management for Mitra (Tier-1 Review)
@@ -197,5 +209,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/refunds/{id}', [MitraRefundController::class, 'show'])->name('mitra.refunds.show');
         Route::post('/refunds/{id}/approve', [MitraRefundController::class, 'approve'])->name('mitra.refunds.approve');
         Route::post('/refunds/{id}/reject', [MitraRefundController::class, 'reject'])->name('mitra.refunds.reject');
+
+        // Analytics & Dashboard Summary for Mitra
+        Route::get('/analytics/summary', [MitraAnalyticsController::class, 'summary'])->name('mitra.analytics.summary');
     });
 });

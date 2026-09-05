@@ -3493,6 +3493,274 @@
                 ]
             }
         },
+        "/api/v1/mitra/analytics/summary": {
+            "get": {
+                "tags": [
+                    "Analytics (Mitra)"
+                ],
+                "summary": "Get dashboard KPI summary metrics, queues and operational status (Mitra)",
+                "operationId": "6388646257ecf9e502607332df1bdec9",
+                "parameters": [
+                    {
+                        "name": "basecamp_id",
+                        "in": "query",
+                        "description": "Filter metrics by specific basecamp ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Analytics summary metrics fetched successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Ringkasan metrik analitik mitra berhasil dimuat."
+                                        },
+                                        "data": {
+                                            "properties": {
+                                                "financial": {
+                                                    "type": "object"
+                                                },
+                                                "operations_today": {
+                                                    "type": "object"
+                                                },
+                                                "action_queues": {
+                                                    "type": "object"
+                                                },
+                                                "resources": {
+                                                    "type": "object"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/mitra/basecamps": {
+            "get": {
+                "tags": [
+                    "Basecamp (Mitra)"
+                ],
+                "summary": "List all basecamps operated by authenticated partner (Mitra)",
+                "operationId": "252c7be33abc4607c510b766f40d9d34",
+                "responses": {
+                    "200": {
+                        "description": "Basecamps list retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Daftar basecamp berhasil dimuat."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/BasecampResource"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden - only for role mitra"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/mitra/basecamps/{id}": {
+            "get": {
+                "tags": [
+                    "Basecamp (Mitra)"
+                ],
+                "summary": "Get details of a specific basecamp operated by this partner (Mitra)",
+                "operationId": "94a1a2a942f34c45be789b75146cc8d4",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Basecamp ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Basecamp details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Detail basecamp berhasil dimuat."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BasecampResource"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Basecamp not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Basecamp (Mitra)"
+                ],
+                "summary": "Update operational details of a basecamp (Mitra)",
+                "operationId": "ed51ed03810ff70b29d576b5950ed32b",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Basecamp ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nama_basecamp"
+                                ],
+                                "properties": {
+                                    "nama_basecamp": {
+                                        "type": "string",
+                                        "example": "Basecamp Selo Merbabu Utama"
+                                    },
+                                    "latitude": {
+                                        "type": "string",
+                                        "example": "-7.452312"
+                                    },
+                                    "longitude": {
+                                        "type": "string",
+                                        "example": "110.423123"
+                                    },
+                                    "jam_operasional": {
+                                        "type": "string",
+                                        "example": "24 Jam Setiap Hari"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Basecamp updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Data basecamp berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BasecampResource"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Basecamp not found"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/mitra/logbooks": {
             "get": {
                 "tags": [
@@ -3892,6 +4160,138 @@
                     },
                     "422": {
                         "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/mitra/orders/{id}/check-in": {
+            "post": {
+                "tags": [
+                    "Pesanan (Mitra)"
+                ],
+                "summary": "Check in a climber booking order at the basecamp by ID (Mitra)",
+                "operationId": "6a49966abded48785a4d38095d551a7a",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Order (Pesanan) ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Climber check-in completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Check-in berhasil. Rombongan pendaki telah tercatat aktif mendaki."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PesananResource"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Order not found"
+                    },
+                    "422": {
+                        "description": "Order not eligible for check-in"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/mitra/orders/check-in": {
+            "post": {
+                "tags": [
+                    "Pesanan (Mitra)"
+                ],
+                "summary": "Check in a climber booking order by invoice number or QR code scan (Mitra)",
+                "operationId": "e8c486ef8caf216d06494e2a2087dfdf",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "invoice"
+                                ],
+                                "properties": {
+                                    "invoice": {
+                                        "type": "string",
+                                        "example": "INV/A/PAID"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Climber check-in completed successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Check-in berhasil. Rombongan pendaki telah tercatat aktif mendaki."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PesananResource"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Invoice not found"
+                    },
+                    "422": {
+                        "description": "Validation error or not eligible for check-in"
                     }
                 },
                 "security": [
@@ -4584,6 +4984,118 @@
                 "responses": {
                     "200": {
                         "description": "Stock updated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/mitra/profile": {
+            "put": {
+                "tags": [
+                    "Mitra Profile"
+                ],
+                "summary": "Update partner (Mitra) profile details and disbursement accounts",
+                "operationId": "6076e1dc13bf35088a1dab7ac5c6aae1",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "nama_pemilik",
+                                    "telepon",
+                                    "alamat",
+                                    "nik",
+                                    "rekening_bank",
+                                    "nama_rekening",
+                                    "bank"
+                                ],
+                                "properties": {
+                                    "nama_pemilik": {
+                                        "type": "string",
+                                        "example": "Budi Santoso"
+                                    },
+                                    "telepon": {
+                                        "type": "string",
+                                        "example": "081234567890"
+                                    },
+                                    "alamat": {
+                                        "type": "string",
+                                        "example": "Jl. Raya Summit No. 10"
+                                    },
+                                    "deskripsi": {
+                                        "type": "string",
+                                        "example": "Pengelola Basecamp Merbabu",
+                                        "nullable": true
+                                    },
+                                    "npwp": {
+                                        "type": "string",
+                                        "example": "12.345.678.9-012.000",
+                                        "nullable": true
+                                    },
+                                    "nik": {
+                                        "type": "string",
+                                        "example": "3201234567890001"
+                                    },
+                                    "rekening_bank": {
+                                        "type": "string",
+                                        "example": "1234567890"
+                                    },
+                                    "nama_rekening": {
+                                        "type": "string",
+                                        "example": "Budi Santoso"
+                                    },
+                                    "bank": {
+                                        "type": "string",
+                                        "example": "Bank BCA"
+                                    },
+                                    "ewallet": {
+                                        "type": "string",
+                                        "example": "081234567890",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Mitra profile updated successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Profil mitra berhasil diperbarui."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/ProfileResource"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden - only for role mitra"
+                    },
+                    "422": {
+                        "description": "Validation error"
                     }
                 },
                 "security": [
@@ -8615,6 +9127,14 @@
             "description": "In-App Chat"
         },
         {
+            "name": "Analytics (Mitra)",
+            "description": "Analytics (Mitra)"
+        },
+        {
+            "name": "Basecamp (Mitra)",
+            "description": "Basecamp (Mitra)"
+        },
+        {
             "name": "Logbook & Summit Proof",
             "description": "Logbook & Summit Proof"
         },
@@ -8625,6 +9145,10 @@
         {
             "name": "Product (Mitra)",
             "description": "Product (Mitra)"
+        },
+        {
+            "name": "Mitra Profile",
+            "description": "Mitra Profile"
         },
         {
             "name": "Mitra Refund",

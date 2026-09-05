@@ -232,3 +232,61 @@ test('mitra is forbidden from updating operational status of another basecamp bo
 
     $response->assertStatus(403);
 });
+
+test('mitra can check in climber booking by order ID and transition status to on_going', function () {
+    $response = $this->actingAs($this->userMitraA)
+        ->postJson(route('mitra.pesanan.check-in', $this->pesananPaidA->id));
+
+    $response->assertStatus(200)
+        ->assertJsonPath('status', 'success')
+        ->assertJsonPath('message', 'Check-in berhasil. Rombongan pendaki telah tercatat aktif mendaki.')
+        ->assertJsonPath('data.status', 'on_going');
+
+    $this->pesananPaidA->refresh();
+    expect($this->pesananPaidA->status)->toBe('on_going');
+
+    $this->detailPaidA->refresh();
+    expect($this->detailPaidA->status_operasional)->toBe('active');
+});
+
+test('mitra can check in climber booking by invoice code and activate pending items', function () {
+    $response = $this->actingAs($this->userMitraA)
+        ->postJson(route('mitra.pesanan.check-in-code'), [
+            'invoice' => 'INV/A/PAID',
+        ]);
+
+    $response->assertStatus(200)
+        ->assertJsonPath('status', 'success')
+        ->assertJsonPath('data.invoice', 'INV/A/PAID')
+        ->assertJsonPath('data.status', 'on_going');
+
+    $this->pesananPaidA->refresh();
+    expect($this->pesananPaidA->status)->toBe('on_going');
+});
+
+test('mitra cannot check in an order that is not paid yet', function () {
+    $response = $this->actingAs($this->userMitraA)
+        ->postJson(route('mitra.pesanan.check-in', $this->pesananPendingA->id));
+
+    $response->assertStatus(422)
+        ->assertJsonPath('status', 'error')
+        ->assertJsonPath('message', 'Hanya pesanan berstatus paid (sudah lunas) yang dapat melakukan check-in.');
+});
+
+test('mitra cannot check in an order that is already checked in (on_going)', function () {
+    $this->pesananPaidA->update(['status' => 'on_going']);
+
+    $response = $this->actingAs($this->userMitraA)
+        ->postJson(route('mitra.pesanan.check-in', $this->pesananPaidA->id));
+
+    $response->assertStatus(422)
+        ->assertJsonPath('status', 'error')
+        ->assertJsonPath('message', 'Rombongan pendaki ini sudah melakukan check-in sebelumnya.');
+});
+
+test('mitra cannot check in booking of another partner basecamp', function () {
+    $response = $this->actingAs($this->userMitraA)
+        ->postJson(route('mitra.pesanan.check-in', $this->pesananPaidB->id));
+
+    $response->assertStatus(403);
+});

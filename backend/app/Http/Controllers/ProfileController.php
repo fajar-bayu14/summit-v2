@@ -38,7 +38,7 @@ class ProfileController extends Controller
         if ($user->role === 'pendaki') {
             $user->load('pendaki');
         } elseif ($user->role === 'mitra') {
-            $user->load('mitra');
+            $user->load(['mitra.basecamps.jalur.gunung', 'mitra.staff']);
         }
 
         return response()->json([

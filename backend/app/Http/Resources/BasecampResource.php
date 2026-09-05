@@ -46,7 +46,10 @@ class BasecampResource extends JsonResource
             'updated_at' => $this->updated_at?->toIso8601String(),
             'mitra' => new MitraResource($this->whenLoaded('mitra')),
             'jalur' => new JalurPendakianResource($this->whenLoaded('jalur')),
+            'staff' => MitraStaffResource::collection($this->whenLoaded('staff')),
+            'staff_count' => $this->whenNotNull($this->staff_count),
             'produks' => ProdukResource::collection($this->whenLoaded('produks')),
+            'produks_count' => $this->whenNotNull($this->produks_count),
         ];
     }
 }
