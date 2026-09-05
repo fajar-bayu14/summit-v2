@@ -5,14 +5,14 @@ namespace App\Http\Requests\Refund;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class ProcessRefundRequest extends FormRequest
+class MitraRejectRefundRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return $this->user() && $this->user()->role === 'admin';
+        return $this->user() !== null;
     }
 
     /**
@@ -23,11 +23,7 @@ class ProcessRefundRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'status' => ['required', 'string', 'in:success,failed,rejected'],
-            'nominal' => ['nullable', 'numeric', 'min:1000'],
-            'tipe' => ['sometimes', 'string', 'in:auto,manual'],
-            'bukti_transfer' => ['nullable', 'string'],
-            'catatan' => ['nullable', 'string', 'max:1000'],
+            'alasan_penolakan' => ['required', 'string', 'min:10', 'max:1000'],
         ];
     }
 }

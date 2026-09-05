@@ -27,6 +27,8 @@ class StoreRefundRequest extends FormRequest
             'bank_tujuan' => ['required', 'string', 'max:50'],
             'rekening_tujuan' => ['required', 'string', 'max:50'],
             'nama_tujuan' => ['required', 'string', 'max:255'],
+            'nominal' => ['nullable', 'numeric', 'min:1000'],
+            'refund_category' => ['nullable', 'string', 'in:pre_trip,incident,force_majeure,dispute'],
         ];
     }
 }

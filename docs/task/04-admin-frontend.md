@@ -239,49 +239,50 @@ Modul supervisi dan monitoring katalog produk (tiket pendakian, paket open trip,
 ---
 
 ## 💰 [MODUL 05: OPERASIONAL FINANSIAL — ESCROW, PAYOUT & REFUND]
-Status Modul: `[ ] In Progress` | `[ ] Module Verification Passed`
+Status Modul: `[x] Completed` | `[x] Module Verification Passed`
 
 Modul audit keuangan platform, persetujuan penarikan dana mitra (disbursement payout), dan eksekusi pengembalian dana (refund).
 
 #### Task Breakdown:
-- [ ] **Task 5.1: Financial Services & Ledger Types**
-  - [ ] Implementasi Kode Selesai:
-    - Interface: `EscrowLedger`, `WithdrawalRequest`, `RefundRequest`
-    - Service `financeService.ts` (`fetchEscrowLedger`, `fetchWithdrawals`, `approveWithdrawal`, `rejectWithdrawal`, `processRefund`)
-  - [ ] Unit/Component Test Passed
-  - [ ] Integration Test (Hit Finance API endpoints) Passed
-  - Status: `[PENDING]`
+- [x] **Task 5.1: Financial Services & Ledger Types**
+  - [x] Implementasi Kode Selesai:
+    - Interface: `EscrowLedger`, `WithdrawalRequest`, `RefundRecord`, `WalletTransaction` di `src/types/finance.ts`
+    - Service `src/api/finance.ts` (`getWithdrawals`, `approveWithdrawal`, `rejectWithdrawal`, `getEscrowLedger`, `getRefunds`, `processRefund`, `triggerForceMajeure`)
+  - [x] Unit/Component Test Passed
+  - [x] Integration Test (Hit Finance API endpoints) Passed
+  - Status: `[TESTED & PASSED]`
 
-- [ ] **Task 5.2: Mitra Withdrawal Review & Approval Dashboard**
-  - [ ] Implementasi Kode Selesai:
-    - Data Table pengajuan penarikan dana dengan status badge (`pending`, `approved`, `completed`, `rejected`)
-    - Modal verifikasi rekening tujuan bank mitra
-    - Action Dialog: Approve (Trigger Xendit Payout) & Reject (Input alasan penolakan wajib)
-  - [ ] Unit/Component Test Passed
-  - [ ] Integration Test (Hit `POST /api/v1/admin/withdrawals/{id}/approve`) Passed
-  - Status: `[PENDING]`
+- [x] **Task 5.2: Mitra Withdrawal Review & Approval Dashboard**
+  - [x] Implementasi Kode Selesai:
+    - Data Table pengajuan penarikan dana dengan status badge (`pending`, `processing`, `completed`, `rejected`, `failed`) di `WithdrawalListView.vue`
+    - Modal verifikasi rekening tujuan bank mitra `WithdrawalDetailModal.vue`
+    - Action Dialog: Approve `WithdrawalApproveModal.vue` (Trigger Payout) & Reject `WithdrawalRejectModal.vue` (Input alasan penolakan wajib & auto-refund)
+  - [x] Unit/Component Test Passed
+  - [x] Integration Test (Hit `POST /api/v1/admin/withdrawals/{id}/approve` & `POST /api/v1/admin/withdrawals/{id}/reject`) Passed
+  - Status: `[TESTED & PASSED]`
 
-- [ ] **Task 5.3: Refund Processing & Dispute Manager**
-  - [ ] Implementasi Kode Selesai:
-    - Data Table klaim refund akibat penutupan jalur/force majeure
-    - Modal review dokumen pendukung refund & nominal kalkulasi
-    - Form eksekusi refund (Opsi metode: Auto Payment Gateway / Manual Bank Transfer)
-  - [ ] Unit/Component Test Passed
-  - [ ] Integration Test (Hit `POST /api/v1/admin/refunds/{id}/process`) Passed
-  - Status: `[PENDING]`
+- [x] **Task 5.3: Refund Processing & Dispute Manager**
+  - [x] Implementasi Kode Selesai:
+    - Dual-Tab Data Table: Tab 1 Pusat Sengketa (Disputes) & Tab 2 Semua Riwayat Refund di `RefundManagementView.vue`
+    - Modal mediasi sengketa `DisputeResolutionModal.vue` (Opsi keputusan: Setujui Penuh 100%, Setujui Parsial Custom Nominal, Tolak Sengketa, proteksi Negative Balance Recovery)
+    - Modal darurat `ForceMajeureModal.vue` (Pilih jalur gunung, filter rentang tanggal booking, input edaran resmi Balai TN, auto-refund massal)
+    - Modal detail `RefundDetailModal.vue`
+  - [x] Unit/Component Test Passed
+  - [x] Integration Test (Hit `POST /api/v1/admin/refunds/{id}/process` & `POST /api/v1/admin/refunds/force-majeure`) Passed
+  - Status: `[TESTED & PASSED]`
 
-- [ ] **Task 5.4: Escrow Holding vs Available Balance Monitor**
-  - [ ] Implementasi Kode Selesai:
-    - Ringkasan metrik Total Saldo Tertahan (Escrow) vs Saldo Siap Cair (Available)
-    - Mutasi transaksi ledger platform
-  - [ ] Unit/Component Test Passed
-  - [ ] Integration Test Passed
-  - Status: `[PENDING]`
+- [x] **Task 5.4: Escrow Holding vs Available Balance Monitor**
+  - [x] Implementasi Kode Selesai:
+    - Ringkasan metrik Total Saldo Tertahan (Escrow) vs Saldo Siap Cair (Available) vs Transaksi Mutasi di `EscrowLedgerView.vue`
+    - Mutasi transaksi ledger platform konsolidasi real-time dengan filter tipe transaksi
+  - [x] Unit/Component Test Passed
+  - [x] Integration Test (Hit `GET /api/v1/admin/escrow/ledger`) Passed
+  - Status: `[TESTED & PASSED]`
 
 #### Module-Level Acceptance Gate:
-- [ ] Seluruh sub-task Modul 05 berstatus `[TESTED & PASSED]`
-- [ ] Alur approval penarikan saldo dan validasi nominal presisi desimal 2 angka di belakang koma teruji tanpa floating point issue
-- [ ] Modul siap di-merge ke branch staging
+- [x] Seluruh sub-task Modul 05 berstatus `[TESTED & PASSED]`
+- [x] Alur approval penarikan saldo dan validasi nominal presisi desimal 2 angka di belakang koma teruji tanpa floating point issue
+- [x] Modul siap di-merge ke branch staging
 
 ---
 

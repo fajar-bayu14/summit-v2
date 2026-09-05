@@ -1,3 +1,4 @@
+import { markRaw } from 'vue'
 import type { NavGroup } from '@/types/navigation'
 import {
   LayoutDashboard,
@@ -23,13 +24,13 @@ export const navigationConfig: NavGroup[] = [
       {
         title: 'Dashboard Admin',
         to: '/admin',
-        icon: LayoutDashboard,
+        icon: markRaw(LayoutDashboard),
         roles: ['admin'],
       },
       {
         title: 'Dashboard Mitra',
         to: '/mitra',
-        icon: LayoutDashboard,
+        icon: markRaw(LayoutDashboard),
         roles: ['mitra'],
       },
     ],
@@ -41,7 +42,7 @@ export const navigationConfig: NavGroup[] = [
       {
         title: 'Verifikasi KYC Pendaki',
         to: '/admin/verifications',
-        icon: ShieldCheck,
+        icon: markRaw(ShieldCheck),
         roles: ['admin'],
       },
     ],
@@ -53,31 +54,31 @@ export const navigationConfig: NavGroup[] = [
       {
         title: 'Master Gunung',
         to: '/admin/mountains',
-        icon: Mountain,
+        icon: markRaw(Mountain),
         roles: ['admin'],
       },
       {
         title: 'Jalur Pendakian',
         to: '/admin/trails',
-        icon: Compass,
+        icon: markRaw(Compass),
         roles: ['admin'],
       },
       {
         title: 'Mitra Basecamp',
         to: '/admin/partners',
-        icon: Users,
+        icon: markRaw(Users),
         roles: ['admin'],
       },
       {
         title: 'Pemetaan Basecamp',
         to: '/admin/basecamps',
-        icon: Building2,
+        icon: markRaw(Building2),
         roles: ['admin'],
       },
       {
         title: 'Monitoring Produk',
         to: '/admin/products',
-        icon: ShoppingBag,
+        icon: markRaw(ShoppingBag),
         roles: ['admin'],
       },
     ],
@@ -89,25 +90,25 @@ export const navigationConfig: NavGroup[] = [
       {
         title: 'Penarikan Dana Mitra',
         to: '/admin/withdrawals',
-        icon: CreditCard,
+        icon: markRaw(CreditCard),
         roles: ['admin'],
       },
       {
-        title: 'Klaim Refund',
+        title: 'Klaim Refund & Sengketa',
         to: '/admin/refunds',
-        icon: RefreshCw,
+        icon: markRaw(RefreshCw),
         roles: ['admin'],
       },
       {
         title: 'Ledger Escrow',
         to: '/admin/escrow',
-        icon: Wallet,
+        icon: markRaw(Wallet),
         roles: ['admin'],
       },
       {
         title: 'Banner Iklan Promosi',
         to: '/admin/ads',
-        icon: Megaphone,
+        icon: markRaw(Megaphone),
         roles: ['admin'],
       },
     ],
@@ -119,31 +120,31 @@ export const navigationConfig: NavGroup[] = [
       {
         title: 'Data Booking Tiket',
         to: '/mitra/orders',
-        icon: CalendarDays,
+        icon: markRaw(CalendarDays),
         roles: ['mitra'],
       },
       {
         title: 'Kelola Kuota Jalur',
         to: '/mitra/quotas',
-        icon: Compass,
+        icon: markRaw(Compass),
         roles: ['mitra'],
       },
       {
         title: 'Rental & Peralatan',
         to: '/mitra/products',
-        icon: ShoppingBag,
+        icon: markRaw(ShoppingBag),
         roles: ['mitra'],
       },
       {
         title: 'Validasi Logbook Summit',
         to: '/mitra/logbooks',
-        icon: ShieldCheck,
+        icon: markRaw(ShieldCheck),
         roles: ['mitra'],
       },
       {
         title: 'Dompet & Penarikan Dana',
         to: '/mitra/wallet',
-        icon: Wallet,
+        icon: markRaw(Wallet),
         roles: ['mitra'],
       },
     ],
@@ -154,16 +155,15 @@ export const navigationConfig: NavGroup[] = [
       {
         title: 'Laporan Rekap',
         to: '/admin/reports',
-        icon: FileSpreadsheet,
+        icon: markRaw(FileSpreadsheet),
         roles: ['admin', 'mitra'],
       },
       {
         title: 'Pengaturan Akun',
         to: '/settings',
-        icon: Settings,
+        icon: markRaw(Settings),
         roles: ['admin', 'mitra'],
       },
     ],
   },
 ]
-

@@ -209,3 +209,110 @@ test('admin can view consolidated escrow ledger', function () {
         ->assertStatus(200)
         ->assertJsonStructure(['status', 'data' => ['data', 'meta', 'links']]);
 });
+
+test('admin can resolve dispute with partial refund and negative balance recovery', function () {
+    $pesanan = Pesanan::create([
+        'invoice' => 'INV/20260903/DISP01',
+        'user_id' => $this->userClimber->id,
+        'basecamp_id' => $this->basecamp->id,
+        'jalur_id' => $this->jalur->id,
+        'status' => 'completed',
+        'subtotal' => 200000.00,
+        'tanggal_booking' => Carbon::yesterday()->format('Y-m-d'),
+        'diskon' => 0.00,
+        'biaya_layanan_user' => 5000.00,
+        'komisi_admin' => 20000.00,
+        'pendapatan_mitra' => 180000.00,
+        'total_bayar' => 205000.00,
+    ]);
+
+    $pembayaran = $pesanan->pembayaran()->create([
+        'amount' => 205000.00,
+        'status' => 'success',
+    ]);
+
+    // Mitra had 0 pending, and already withdrew all available balance (available = 0)
+    $this->wallet->update([
+        'saldo_pending' => 0.00,
+        'saldo_available' => 0.00,
+        'total_withdrawn' => 180000.00,
+    ]);
+
+    $refund = Refund::create([
+        'pesanan_id' => $pesanan->id,
+        'pembayaran_id' => $pembayaran->id,
+        'user_id' => $this->userClimber->id,
+        'mitra_id' => $this->mitra->id,
+        'nominal' => 205000.00,
+        'alasan' => 'Tenda rusak bocor parah di pos 3 saat hujan',
+        'status' => 'disputed',
+        'refund_category' => 'incident',
+        'is_disputed' => true,
+        'disputed_at' => Carbon::now(),
+        'dispute_reason' => 'Mitra menolak tanggung jawab padahal tenda robek dari awal',
+        'bank_tujuan' => 'BCA',
+        'rekening_tujuan' => '0987654321',
+        'nama_tujuan' => 'Pendaki Disputing',
+    ]);
+
+    // Admin mediates and approves partial refund of 100,000 (mitra share ~ 90,000 deducted into negative)
+    $res = $this->actingAs($this->admin)
+        ->postJson(route('admin.refunds.process', ['id' => $refund->id]), [
+            'status' => 'success',
+            'tipe' => 'manual',
+            'nominal' => 100000.00,
+            'bukti_transfer' => 'proofs/dispute_res.jpg',
+            'catatan' => 'Penyelesaian sengketa: Pengembalian dana 50% disetujui.',
+        ]);
+
+    $res->assertStatus(200)
+        ->assertJsonPath('data.status', 'success')
+        ->assertJsonPath('data.nominal_disetujui', 100000);
+
+    $this->wallet->refresh();
+    // Mitra available balance should be negative (-87804.88 approx based on pro-rata mitra portion)
+    expect((float) $this->wallet->saldo_available)->toBeLessThan(0);
+});
+
+test('admin can trigger force majeure mass auto-refund for closed jalur', function () {
+    $pesanan1 = Pesanan::create([
+        'invoice' => 'INV/20260903/FM01',
+        'user_id' => $this->userClimber->id,
+        'basecamp_id' => $this->basecamp->id,
+        'jalur_id' => $this->jalur->id,
+        'status' => 'paid',
+        'subtotal' => 100000.00,
+        'tanggal_booking' => Carbon::tomorrow()->format('Y-m-d'),
+        'diskon' => 0.00,
+        'biaya_layanan_user' => 5000.00,
+        'komisi_admin' => 10000.00,
+        'pendapatan_mitra' => 90000.00,
+        'total_bayar' => 105000.00,
+    ]);
+
+    $pesanan1->pembayaran()->create([
+        'amount' => 105000.00,
+        'status' => 'success',
+    ]);
+
+    $this->wallet->update(['saldo_pending' => 90000.00]);
+
+    $res = $this->actingAs($this->admin)
+        ->postJson(route('admin.refunds.force-majeure'), [
+            'jalur_id' => $this->jalur->id,
+            'start_date' => Carbon::tomorrow()->format('Y-m-d'),
+            'end_date' => Carbon::tomorrow()->format('Y-m-d'),
+            'alasan' => 'Erupsi gunung dan penutupan total jalur oleh Balai Taman Nasional.',
+        ]);
+
+    $res->assertStatus(200)
+        ->assertJsonPath('data.total_refunded', 1);
+
+    $pesanan1->refresh();
+    expect($pesanan1->status)->toBe('refunded');
+
+    $this->wallet->refresh();
+    expect((float) $this->wallet->saldo_pending)->toBe(0.00);
+
+    expect(Refund::where('pesanan_id', $pesanan1->id)->where('refund_category', 'force_majeure')->exists())->toBeTrue();
+});

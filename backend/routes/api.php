@@ -15,6 +15,7 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\Mitra\LogbookController as MitraLogbookController;
 use App\Http\Controllers\Mitra\PesananController as MitraPesananController;
 use App\Http\Controllers\Mitra\ProductController as MitraProductController;
+use App\Http\Controllers\Mitra\RefundController as MitraRefundController;
 use App\Http\Controllers\Mitra\StaffController as MitraStaffController;
 use App\Http\Controllers\Mitra\TrailController as MitraTrailController;
 use App\Http\Controllers\Mitra\WalletController as MitraWalletController;
@@ -72,6 +73,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/orders/checkout', [PendakiPesananController::class, 'checkout'])->name('pesanan.checkout');
     Route::post('/orders/{invoice}/cancel', [PendakiPesananController::class, 'cancel'])->where('invoice', '[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){0,2}')->name('pesanan.cancel');
     Route::post('/orders/{invoice}/refund-request', [PendakiRefundController::class, 'store'])->where('invoice', '[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){0,2}')->name('refund.store');
+    Route::post('/refunds/{id}/dispute', [PendakiRefundController::class, 'dispute'])->name('refund.dispute');
 
     // Digital Logbook & Summit Proof endpoints for Climber (Pendaki)
     Route::post('/orders/{invoice}/logbook', [PendakiLogbookController::class, 'store'])->where('invoice', '[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){0,2}')->name('logbook.store');
@@ -141,6 +143,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/escrow/ledger', [AdminWithdrawalController::class, 'ledger'])->name('admin.escrow.ledger');
         Route::get('/refunds', [AdminRefundController::class, 'index'])->name('admin.refunds.index');
         Route::post('/refunds/{id}/process', [AdminRefundController::class, 'process'])->name('admin.refunds.process');
+        Route::post('/refunds/force-majeure', [AdminRefundController::class, 'forceMajeure'])->name('admin.refunds.force-majeure');
 
         // Ads Banner Management (Admin)
         Route::get('/ads/banners', [AdminBannerAdController::class, 'index'])->name('admin.ads.banners.index');
@@ -188,5 +191,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/orders', [MitraPesananController::class, 'index'])->name('mitra.pesanan.index');
         Route::get('/orders/{id}', [MitraPesananController::class, 'show'])->name('mitra.pesanan.show');
         Route::patch('/orders/{pesananId}/items/{itemId}', [MitraPesananController::class, 'updateItemStatus'])->name('mitra.pesanan.update-item');
+
+        // Refund Management for Mitra (Tier-1 Review)
+        Route::get('/refunds', [MitraRefundController::class, 'index'])->name('mitra.refunds.index');
+        Route::get('/refunds/{id}', [MitraRefundController::class, 'show'])->name('mitra.refunds.show');
+        Route::post('/refunds/{id}/approve', [MitraRefundController::class, 'approve'])->name('mitra.refunds.approve');
+        Route::post('/refunds/{id}/reject', [MitraRefundController::class, 'reject'])->name('mitra.refunds.reject');
     });
 });

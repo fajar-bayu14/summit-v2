@@ -2222,12 +2222,58 @@
                 "operationId": "a3526d5de7c223020927853add249d64",
                 "parameters": [
                     {
+                        "name": "mitra_id",
+                        "in": "query",
+                        "description": "Filter products by mitra ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
                         "name": "basecamp_id",
                         "in": "query",
                         "description": "Filter products by basecamp ID",
                         "required": false,
                         "schema": {
                             "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "kategori",
+                        "in": "query",
+                        "description": "Filter products by category",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search products by name, description, basecamp, or partner",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_active",
+                        "in": "query",
+                        "description": "Filter by active status",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of items per page (max 100)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 15
                         }
                     },
                     {
@@ -2346,7 +2392,7 @@
                 "tags": [
                     "Refund (Admin)"
                 ],
-                "summary": "List all refund requests (Admin)",
+                "summary": "List all refund requests & disputes (Admin Tier-2)",
                 "operationId": "2d84c3afb34dad6adb9dc3178d013d54",
                 "parameters": [
                     {
@@ -2354,12 +2400,31 @@
                         "in": "query",
                         "required": false,
                         "schema": {
-                            "type": "string",
-                            "enum": [
-                                "pending",
-                                "success",
-                                "failed"
-                            ]
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "is_disputed",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "refund_category",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
                         }
                     },
                     {
@@ -2408,7 +2473,7 @@
                 "tags": [
                     "Refund (Admin)"
                 ],
-                "summary": "Process and approve/reject a refund request (Admin)",
+                "summary": "Process and approve/reject a refund request / dispute (Admin Tier-2)",
                 "operationId": "cfcba98711bf9608a26a0f5e550993d3",
                 "parameters": [
                     {
@@ -2434,8 +2499,14 @@
                                         "example": "success",
                                         "enum": [
                                             "success",
+                                            "rejected",
                                             "failed"
                                         ]
+                                    },
+                                    "nominal": {
+                                        "type": "number",
+                                        "example": 50000,
+                                        "nullable": true
                                     },
                                     "tipe": {
                                         "type": "string",
@@ -2452,7 +2523,7 @@
                                     },
                                     "catatan": {
                                         "type": "string",
-                                        "example": "Dana telah ditransfer ke rekening pendaki",
+                                        "example": "Klaim sengketa disetujui sebagian",
                                         "nullable": true
                                     }
                                 },
@@ -2463,26 +2534,63 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Refund processed successfully",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "status": {
-                                            "type": "string",
-                                            "example": "success"
-                                        },
-                                        "data": {
-                                            "$ref": "#/components/schemas/RefundResource"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
+                        "description": "Refund processed successfully"
                     },
                     "422": {
                         "description": "Validation error / already processed"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/admin/refunds/force-majeure": {
+            "post": {
+                "tags": [
+                    "Refund (Admin)"
+                ],
+                "summary": "Mass cancel and refund orders due to force majeure trail closure (Admin)",
+                "operationId": "1ccba1519249ec65e59bf8bbb0b598dd",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "jalur_id",
+                                    "alasan"
+                                ],
+                                "properties": {
+                                    "jalur_id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "tanggal_mulai": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-05"
+                                    },
+                                    "tanggal_selesai": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2026-09-07"
+                                    },
+                                    "alasan": {
+                                        "type": "string",
+                                        "example": "Penutupan jalur resmi Balai Taman Nasional karena badai"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Force majeure bulk refund executed"
                     }
                 },
                 "security": [
@@ -4485,6 +4593,159 @@
                 ]
             }
         },
+        "/api/v1/mitra/refunds": {
+            "get": {
+                "tags": [
+                    "Mitra Refund"
+                ],
+                "summary": "List all refund requests for authenticated partner (Mitra Tier-1)",
+                "operationId": "b0c3cd520896ca4cac79c8bd44a9972a",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Partner refunds fetched successfully"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/mitra/refunds/{id}": {
+            "get": {
+                "tags": [
+                    "Mitra Refund"
+                ],
+                "summary": "Get details of a specific refund request (Mitra Tier-1)",
+                "operationId": "27b057ffd02423f4d68f45009f51e005",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Refund details fetched successfully"
+                    },
+                    "404": {
+                        "description": "Refund not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/mitra/refunds/{id}/approve": {
+            "post": {
+                "tags": [
+                    "Mitra Refund"
+                ],
+                "summary": "Approve refund request by partner (Mitra Tier-1)",
+                "operationId": "d9cfed03cafffb02ee849f6b50df7f74",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Refund approved by partner"
+                    },
+                    "422": {
+                        "description": "Refund cannot be approved in current status"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/mitra/refunds/{id}/reject": {
+            "post": {
+                "tags": [
+                    "Mitra Refund"
+                ],
+                "summary": "Reject refund request by partner with explanation (Mitra Tier-1)",
+                "operationId": "c95a65f2a77adcd27660f2ad2230f416",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "alasan_penolakan"
+                                ],
+                                "properties": {
+                                    "alasan_penolakan": {
+                                        "type": "string",
+                                        "example": "Pembatalan melewati batas H-1 dan logistik telah disiapkan"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Refund rejected by partner"
+                    },
+                    "422": {
+                        "description": "Refund cannot be rejected in current status"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/mitra/staff": {
             "get": {
                 "tags": [
@@ -6457,6 +6718,21 @@
                                     "nama_tujuan": {
                                         "type": "string",
                                         "example": "John Doe"
+                                    },
+                                    "nominal": {
+                                        "type": "number",
+                                        "example": 50000,
+                                        "nullable": true
+                                    },
+                                    "refund_category": {
+                                        "type": "string",
+                                        "example": "pre_trip",
+                                        "enum": [
+                                            "pre_trip",
+                                            "incident",
+                                            "force_majeure",
+                                            "dispute"
+                                        ]
                                     }
                                 },
                                 "type": "object"
@@ -6486,6 +6762,57 @@
                     },
                     "422": {
                         "description": "Order not eligible for refund"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/refunds/{id}/dispute": {
+            "post": {
+                "tags": [
+                    "Refund"
+                ],
+                "summary": "Escalate a rejected refund to Admin Dispute Center (Pendaki)",
+                "operationId": "d0c5df318726ba6010c473b03ce4f516",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "alasan_dispute"
+                                ],
+                                "properties": {
+                                    "alasan_dispute": {
+                                        "type": "string",
+                                        "example": "Mitra menolak sepihak padahal tenda memang bocor sejak pos awal"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Refund escalated to dispute center"
+                    },
+                    "422": {
+                        "description": "Refund cannot be disputed in current status"
                     }
                 },
                 "security": [
@@ -8298,6 +8625,10 @@
         {
             "name": "Product (Mitra)",
             "description": "Product (Mitra)"
+        },
+        {
+            "name": "Mitra Refund",
+            "description": "Mitra Refund"
         },
         {
             "name": "Staff (Mitra)",

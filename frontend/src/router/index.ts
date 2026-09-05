@@ -123,19 +123,19 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'withdrawals',
         name: 'admin.withdrawals',
-        component: () => import('@/views/admin/AdminDashboardView.vue'),
+        component: () => import('@/views/admin/finance/WithdrawalListView.vue'),
         meta: { title: 'Penarikan Dana Mitra - Summit', roles: ['admin'] },
       },
       {
         path: 'refunds',
         name: 'admin.refunds',
-        component: () => import('@/views/admin/AdminDashboardView.vue'),
-        meta: { title: 'Klaim Refund - Summit', roles: ['admin'] },
+        component: () => import('@/views/admin/finance/RefundManagementView.vue'),
+        meta: { title: 'Klaim Refund & Sengketa - Summit', roles: ['admin'] },
       },
       {
         path: 'escrow',
         name: 'admin.escrow',
-        component: () => import('@/views/admin/AdminDashboardView.vue'),
+        component: () => import('@/views/admin/finance/EscrowLedgerView.vue'),
         meta: { title: 'Ledger Escrow - Summit', roles: ['admin'] },
       },
       {
