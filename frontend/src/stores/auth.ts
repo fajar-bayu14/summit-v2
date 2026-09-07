@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api/auth'
+import { useMitraStore } from './mitra'
 import type { LoginCredentials, User, UserRole } from '@/types/auth'
 import type { AxiosError } from 'axios'
 import type { ApiErrorResponse } from '@/types/api'
@@ -27,6 +28,17 @@ export const useAuthStore = defineStore('auth', () => {
   const isMitra = computed<boolean>(() => user.value?.role === 'mitra')
   const isPendaki = computed<boolean>(() => user.value?.role === 'pendaki')
 
+  function syncMitraContext(userData: User) {
+    if (userData.role === 'mitra') {
+      const mitraStore = useMitraStore()
+      if (userData.mitra?.basecamps && userData.mitra.basecamps.length > 0) {
+        mitraStore.setBasecamps(userData.mitra.basecamps)
+      } else {
+        mitraStore.fetchBasecamps()
+      }
+    }
+  }
+
   function clearErrors() {
     error.value = null
     validationErrors.value = null
@@ -46,6 +58,8 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('auth_token', response.token)
         localStorage.setItem('user_data', JSON.stringify(response.data))
         
+        syncMitraContext(response.data)
+
         return response.data
       }
       throw new Error(response.message || 'Login failed')
@@ -77,6 +91,7 @@ export const useAuthStore = defineStore('auth', () => {
       if (response.data) {
         user.value = response.data
         localStorage.setItem('user_data', JSON.stringify(response.data))
+        syncMitraContext(response.data)
         return response.data
       }
       return null
@@ -99,6 +114,10 @@ export const useAuthStore = defineStore('auth', () => {
       clearErrors()
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user_data')
+      
+      const mitraStore = useMitraStore()
+      mitraStore.reset()
+      
       isLoading.value = false
     }
   }

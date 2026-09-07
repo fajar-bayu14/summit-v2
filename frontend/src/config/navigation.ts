@@ -15,6 +15,8 @@ import {
   Megaphone,
   FileSpreadsheet,
   Settings,
+  MessageSquare,
+  Ticket,
 } from 'lucide-vue-next'
 
 export const navigationConfig: NavGroup[] = [
@@ -118,19 +120,19 @@ export const navigationConfig: NavGroup[] = [
     roles: ['mitra'],
     items: [
       {
-        title: 'Data Booking Tiket',
+        title: 'Pesanan & Check-In',
         to: '/mitra/orders',
+        icon: markRaw(Ticket),
+        roles: ['mitra'],
+      },
+      {
+        title: 'Kalender Kuota Jalur',
+        to: '/mitra/quotas',
         icon: markRaw(CalendarDays),
         roles: ['mitra'],
       },
       {
-        title: 'Kelola Kuota Jalur',
-        to: '/mitra/quotas',
-        icon: markRaw(Compass),
-        roles: ['mitra'],
-      },
-      {
-        title: 'Rental & Peralatan',
+        title: 'Katalog Produk & Rental',
         to: '/mitra/products',
         icon: markRaw(ShoppingBag),
         roles: ['mitra'],
@@ -141,10 +143,34 @@ export const navigationConfig: NavGroup[] = [
         icon: markRaw(ShieldCheck),
         roles: ['mitra'],
       },
+    ],
+  },
+  {
+    heading: 'Keuangan & Layanan Mitra',
+    roles: ['mitra'],
+    items: [
       {
         title: 'Dompet & Penarikan Dana',
         to: '/mitra/wallet',
         icon: markRaw(Wallet),
+        roles: ['mitra'],
+      },
+      {
+        title: 'Permohonan Refund',
+        to: '/mitra/refunds',
+        icon: markRaw(RefreshCw),
+        roles: ['mitra'],
+      },
+      {
+        title: 'Staf Guide & Porter',
+        to: '/mitra/staff',
+        icon: markRaw(Users),
+        roles: ['mitra'],
+      },
+      {
+        title: 'In-App Chat Pendaki',
+        to: '/mitra/chat',
+        icon: markRaw(MessageSquare),
         roles: ['mitra'],
       },
     ],
@@ -156,13 +182,19 @@ export const navigationConfig: NavGroup[] = [
         title: 'Laporan Rekap',
         to: '/admin/reports',
         icon: markRaw(FileSpreadsheet),
-        roles: ['admin', 'mitra'],
+        roles: ['admin'],
+      },
+      {
+        title: 'Pengaturan Profil Mitra',
+        to: '/mitra/settings',
+        icon: markRaw(Settings),
+        roles: ['mitra'],
       },
       {
         title: 'Pengaturan Akun',
         to: '/settings',
         icon: markRaw(Settings),
-        roles: ['admin', 'mitra'],
+        roles: ['admin'],
       },
     ],
   },

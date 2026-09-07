@@ -57,9 +57,9 @@ const selectedProduct = ref<Product | null>(null)
 
 // Metrics
 const totalProductsCount = computed(() => paginationMeta.value.total || products.value.length)
-const totalTicketsCount = computed(() => products.value.filter(p => p.kategori === 'ticket').length)
-const totalRentalsCount = computed(() => products.value.filter(p => p.kategori === 'rental').length)
-const totalTripsCount = computed(() => products.value.filter(p => p.kategori === 'opentrip').length)
+const totalTicketsCount = computed(() => products.value.filter((p: Product) => p.kategori === 'ticket').length)
+const totalRentalsCount = computed(() => products.value.filter((p: Product) => p.kategori === 'rental').length)
+const totalTripsCount = computed(() => products.value.filter((p: Product) => p.kategori === 'opentrip').length)
 
 // Compute Grouped Catalog by Partner & Basecamp
 const partnerGroups = computed<PartnerGroupedCatalog[]>(() => {
@@ -88,7 +88,7 @@ const partnerGroups = computed<PartnerGroupedCatalog[]>(() => {
     else if (product.kategori === 'rental') pGroup.totalRentals++
     else if (product.kategori === 'opentrip') pGroup.totalTrips++
 
-    let bGroup = pGroup.basecampGroups.find(bg => bg.basecamp.id === basecamp.id)
+    let bGroup = pGroup.basecampGroups.find((bg: any) => bg.basecamp.id === basecamp.id)
     if (!bGroup) {
       bGroup = {
         basecamp,

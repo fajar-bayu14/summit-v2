@@ -26,7 +26,7 @@ docs/task/
 | **TSK-MIT-BE** | **Mitra Backend & API** | Laravel 13 API (`backend/`) | [`02-mitra-endpoints.md`](02-mitra-endpoints.md) | 🟢 **100% Selesai** |
 | **TSK-PND-BE** | **Pendaki Backend & API** | Laravel 13 API (`backend/`) | `03-pendaki-endpoints.md` | ⚪ *Planned* |
 | **TSK-ADM-FE** | **Admin Web Dashboard** | Vue 3 + Tailwind + shadcn-vue (`frontend/`) | [`04-admin-frontend.md`](04-admin-frontend.md) | 🔵 **WBS Defined (0%)** |
-| **TSK-MIT-FE** | **Mitra Web Dashboard** | Vue 3 + Tailwind + shadcn-vue (`frontend/`) | [`05-mitra-frontend.md`](05-mitra-frontend.md) | 🔵 **WBS Defined (0%)** |
+| **TSK-MIT-FE** | **Mitra Web Dashboard** | Vue 3 + Tailwind + shadcn-vue (`frontend/`) | [`05-mitra-frontend.md`](05-mitra-frontend.md) | 🟢 **100% Selesai (Modul 00 — 10 Passed)** |
 | **TSK-PND-MO** | **Pendaki Mobile App** | Quasar Framework + Capacitor (`mobile/`) | *TBD* | ⚪ *Planned* |
 
 ---

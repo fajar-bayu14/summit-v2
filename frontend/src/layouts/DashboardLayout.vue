@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { navigationConfig } from '@/config/navigation'
+import BasecampSwitcher from '@/components/mitra/BasecampSwitcher.vue'
 import type { NavGroup, NavItem } from '@/types/navigation'
 import {
   Mountain,
@@ -242,6 +243,11 @@ async function handleLogout() {
         </Badge>
       </div>
 
+      <!-- Mobile Basecamp Switcher for Mitra -->
+      <div v-if="authStore.isMitra" class="px-3 py-2 border-b bg-card">
+        <BasecampSwitcher />
+      </div>
+
       <!-- Mobile Navigation Links -->
       <div class="flex-1 overflow-y-auto p-3 space-y-4">
         <div v-for="(group, gIdx) in filteredNavigation" :key="gIdx" class="space-y-0.5">
@@ -314,6 +320,11 @@ async function handleLogout() {
             <span class="text-foreground font-semibold capitalize">
               {{ route.meta.title?.toString().replace(' - Summit', '') || 'Dashboard' }}
             </span>
+          </div>
+
+          <!-- Basecamp Context Switcher for Mitra -->
+          <div v-if="authStore.isMitra" class="hidden md:flex items-center ml-2">
+            <BasecampSwitcher />
           </div>
         </div>
 

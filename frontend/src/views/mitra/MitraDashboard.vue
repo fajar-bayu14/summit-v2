@@ -1,204 +1,190 @@
 <script setup lang="ts">
+import { ref, onMounted, watch, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useMitraStore } from '@/stores/mitra'
+import mitraDashboardApi from '@/api/mitraDashboard'
+import type { MitraAnalyticsSummary } from '@/types/dashboard'
+import { getApiErrorMessage } from '@/lib/axios'
 import {
-  Compass,
-  ShoppingBag,
-  Users,
-  CheckCircle2,
   Calendar,
-  Filter,
-  MoreVertical,
+  RefreshCw,
+  QrCode,
+  Building2,
+  AlertCircle,
 } from 'lucide-vue-next'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import DashboardMetricGrid from '@/components/mitra/dashboard/DashboardMetricGrid.vue'
+import ActionQueuesBar from '@/components/mitra/dashboard/ActionQueuesBar.vue'
+import EmergencyTrailBanner from '@/components/mitra/dashboard/EmergencyTrailBanner.vue'
+import EmergencyClosureModal from '@/components/mitra/dashboard/EmergencyClosureModal.vue'
+import TodayArrivalTable from '@/components/mitra/dashboard/TodayArrivalTable.vue'
 
-const metricStats = [
-  {
-    title: 'Sisa Kuota Hari Ini',
-    value: '65 / 150',
-    change: '43% terisi',
-    icon: Compass,
-    description: 'Jalur Sembalun - Pos 1',
-  },
-  {
-    title: 'Pendaki Terjadwal Hari Ini',
-    value: '85 Orang',
-    change: '18 rombongan',
-    icon: Users,
-    description: 'Estimasi check-in 08:00 - 15:00',
-  },
-  {
-    title: 'Rental Gear Disewa',
-    value: '34 Unit',
-    change: 'Tenda & Matras',
-    icon: ShoppingBag,
-    description: '8 unit siap diambil hari ini',
-  },
-  {
-    title: 'Check-in Selesai',
-    value: '52 Orang',
-    change: '61% dari total',
-    icon: CheckCircle2,
-    description: 'Sudah briefing keselamatan',
-  },
-]
+const router = useRouter()
+const mitraStore = useMitraStore()
 
-const recentBookings = [
-  {
-    id: 'BKG-MT-901',
-    leader: 'Hendra Wijaya',
-    phone: '081234567890',
-    track: 'Jalur Sembalun',
-    checkinDate: 'Hari ini, 09:30',
-    members: 4,
-    rental: 'Tenda Dome (1x)',
-    status: 'READY_CHECKIN',
-  },
-  {
-    id: 'BKG-MT-902',
-    leader: 'Rina Kusuma',
-    phone: '085712345678',
-    track: 'Jalur Sembalun',
-    checkinDate: 'Hari ini, 10:15',
-    members: 2,
-    rental: 'None',
-    status: 'CHECKED_IN',
-  },
-  {
-    id: 'BKG-MT-903',
-    leader: 'Agus Pratama',
-    phone: '087812345678',
-    track: 'Jalur Sembalun',
-    checkinDate: 'Besok, 07:00',
-    members: 6,
-    rental: 'Sleeping Bag (4x)',
-    status: 'PAID',
-  },
-]
+const metrics = ref<MitraAnalyticsSummary | null>(null)
+const todayOrders = ref<any[]>([])
+const isLoading = ref<boolean>(false)
+const errorMessage = ref<string | null>(null)
+const isEmergencyModalOpen = ref<boolean>(false)
+
+const activeBasecamp = computed(() => mitraStore.activeBasecamp)
+const activeJalur = computed(() => mitraStore.activeJalur)
+const activeGunung = computed(() => mitraStore.activeGunung)
+
+const todayFormatted = computed(() => {
+  return new Intl.DateTimeFormat('id-ID', {
+    dateStyle: 'full',
+  }).format(new Date())
+})
+
+async function fetchDashboardData() {
+  isLoading.value = true
+  errorMessage.value = null
+
+  try {
+    const basecampId = mitraStore.activeBasecampId
+
+    const [summaryRes, ordersRes] = await Promise.all([
+      mitraDashboardApi.getSummary(basecampId),
+      mitraDashboardApi.getTodayOrders(basecampId),
+    ])
+
+    if (summaryRes.data) {
+      metrics.value = summaryRes.data
+    }
+
+    if (ordersRes.data) {
+      todayOrders.value = Array.isArray(ordersRes.data) ? ordersRes.data : ordersRes.data.data || []
+    }
+  } catch (err) {
+    errorMessage.value = getApiErrorMessage(err, 'Gagal memuat data dashboard operasional mitra.')
+  } finally {
+    isLoading.value = false
+  }
+}
+
+// Watch for active basecamp changes and reload data
+watch(
+  () => mitraStore.activeBasecampId,
+  () => {
+    fetchDashboardData()
+  }
+)
+
+onMounted(() => {
+  fetchDashboardData()
+})
+
+function handleEmergencySuccess(newStatus: 'open' | 'close') {
+  if (metrics.value?.operations_today) {
+    metrics.value.operations_today.status_jalur = newStatus
+  }
+  fetchDashboardData()
+}
+
+function handleViewOrderDetail(order: any) {
+  router.push(`/mitra/orders?search=${encodeURIComponent(order.invoice)}`)
+}
+
+function handleProcessCheckIn(order: any) {
+  router.push(`/mitra/orders?search=${encodeURIComponent(order.invoice)}&checkin=true`)
+}
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+  <div class="space-y-6 pb-12">
+    <!-- Header Section -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
       <div>
-        <h1 class="text-2xl font-bold tracking-tight text-foreground">Dashboard Mitra Basecamp</h1>
-        <p class="text-sm text-muted-foreground mt-0.5">
-          Kelola kuota jalur harian, validasi tiket QR pendaki, dan inventaris peralatan rental.
+        <div class="flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+          <Building2 class="h-3.5 w-3.5" />
+          <span>{{ activeBasecamp?.nama_basecamp || 'Pos Utama Basecamp' }}</span>
+          <span v-if="activeGunung">· {{ activeGunung.nama_gunung }}</span>
+        </div>
+        <h1 class="text-2xl font-extrabold tracking-tight text-foreground mt-0.5">
+          Pusat Operasional Basecamp
+        </h1>
+        <p class="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          Monitoring kuota harian, validasi kedatangan pendaki, dan status jalur pendakian secara real-time.
         </p>
       </div>
-      <div class="flex items-center gap-2.5">
-        <Button variant="outline" size="sm" class="gap-1.5 text-xs h-9">
-          <Calendar class="h-3.5 w-3.5" /> Hari Ini (03 Sep 2026)
+
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border bg-muted/30 text-xs font-medium text-muted-foreground">
+          <Calendar class="h-3.5 w-3.5 text-emerald-600" />
+          <span>{{ todayFormatted }}</span>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-9 px-3 text-xs gap-1.5 rounded-xl"
+          :disabled="isLoading"
+          @click="fetchDashboardData"
+        >
+          <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': isLoading }" />
+          <span class="hidden sm:inline">Segarkan</span>
         </Button>
-        <Button size="sm" class="gap-1.5 text-xs h-9 bg-emerald-700 hover:bg-emerald-800 text-white">
-          <Compass class="h-3.5 w-3.5" /> Scan QR Tiket
+
+        <Button
+          size="sm"
+          class="h-9 px-3.5 text-xs gap-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold shadow-xs"
+          @click="router.push('/mitra/orders')"
+        >
+          <QrCode class="h-3.5 w-3.5" />
+          <span>Pindai E-Ticket</span>
         </Button>
       </div>
     </div>
 
-    <!-- Section 1: Metrics -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <Card v-for="(stat, idx) in metricStats" :key="idx" class="border shadow-xs">
-        <CardHeader class="flex flex-row items-center justify-between pb-2 space-y-0">
-          <CardTitle class="text-xs font-medium text-muted-foreground">{{ stat.title }}</CardTitle>
-          <div class="h-8 w-8 rounded-md bg-muted/60 flex items-center justify-center text-muted-foreground">
-            <component :is="stat.icon" class="h-4 w-4" />
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div class="text-2xl font-extrabold tracking-tight text-foreground">{{ stat.value }}</div>
-          <p class="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-1">{{ stat.change }}</p>
-          <p class="text-[11px] text-muted-foreground mt-0.5">{{ stat.description }}</p>
-        </CardContent>
-      </Card>
+    <!-- Error Alert if any -->
+    <div
+      v-if="errorMessage"
+      class="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-xs flex items-center justify-between gap-3"
+    >
+      <div class="flex items-center gap-2">
+        <AlertCircle class="h-4 w-4 shrink-0" />
+        <span>{{ errorMessage }}</span>
+      </div>
+      <Button variant="ghost" size="sm" class="h-7 text-xs" @click="fetchDashboardData">
+        Coba Lagi
+      </Button>
     </div>
 
-    <!-- Section 2: Bookings -->
-    <Card class="border shadow-xs">
-      <CardHeader class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 gap-3">
-        <div>
-          <CardTitle class="text-base font-semibold">Antrean Check-in Pendaki</CardTitle>
-          <CardDescription class="text-xs">Daftar rombongan pendaki yang dijadwalkan masuk pos hari ini</CardDescription>
-        </div>
-        <Button variant="outline" size="sm" class="text-xs h-8 gap-1.5">
-          <Filter class="h-3.5 w-3.5" /> Filter Jalur
-        </Button>
-      </CardHeader>
-      <CardContent class="p-0">
-        <div class="overflow-x-auto">
-          <Table>
-            <TableHeader class="bg-muted/40">
-              <TableRow>
-                <TableHead class="text-xs font-semibold">Kode Reservasi</TableHead>
-                <TableHead class="text-xs font-semibold">Ketua Rombongan</TableHead>
-                <TableHead class="text-xs font-semibold">Jadwal Tiba</TableHead>
-                <TableHead class="text-xs font-semibold">Jumlah Peserta</TableHead>
-                <TableHead class="text-xs font-semibold">Item Rental</TableHead>
-                <TableHead class="text-xs font-semibold">Status</TableHead>
-                <TableHead class="text-xs font-semibold text-right">Aksi</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-for="item in recentBookings" :key="item.id" class="hover:bg-muted/30 transition">
-                <TableCell class="font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                  {{ item.id }}
-                </TableCell>
-                <TableCell>
-                  <div class="flex flex-col">
-                    <span class="font-medium text-xs text-foreground">{{ item.leader }}</span>
-                    <span class="text-[11px] text-muted-foreground">{{ item.phone }}</span>
-                  </div>
-                </TableCell>
-                <TableCell class="text-xs font-medium">{{ item.checkinDate }}</TableCell>
-                <TableCell class="text-xs font-medium">{{ item.members }} Orang</TableCell>
-                <TableCell class="text-xs text-muted-foreground">{{ item.rental }}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    class="text-[10px] font-semibold"
-                    :class="[
-                      item.status === 'CHECKED_IN' ? 'bg-blue-500/10 text-blue-600 border-blue-500/20' :
-                      item.status === 'READY_CHECKIN' ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' :
-                      'bg-emerald-500/10 text-emerald-600 border-emerald-500/20'
-                    ]"
-                  >
-                    {{ item.status === 'CHECKED_IN' ? 'Sudah Naik' : item.status === 'READY_CHECKIN' ? 'Siap Check-in' : 'Lunas' }}
-                  </Badge>
-                </TableCell>
-                <TableCell class="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger as-child>
-                      <Button variant="ghost" size="icon" class="h-7 w-7">
-                        <MoreVertical class="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Proses Check-in</DropdownMenuItem>
-                      <DropdownMenuItem>Serah Terima Rental</DropdownMenuItem>
-                      <DropdownMenuItem>Lihat Detail Anggota</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
+    <!-- Section 1: Emergency Trail Closure Banner -->
+    <EmergencyTrailBanner
+      :status="metrics?.operations_today?.status_jalur || 'open'"
+      :trail-name="activeJalur?.nama_jalur || 'Jalur Pendakian'"
+      :mountain-name="activeGunung?.nama_gunung || 'Gunung'"
+      @open-modal="isEmergencyModalOpen = true"
+    />
+
+    <!-- Section 2: Metric Cards Grid -->
+    <DashboardMetricGrid :metrics="metrics" :loading="isLoading" />
+
+    <!-- Section 3: Action Queues Bar -->
+    <ActionQueuesBar
+      :action-queues="metrics?.action_queues"
+      :resources="metrics?.resources"
+    />
+
+    <!-- Section 4: Today's Arrival & Check-In Queue Table -->
+    <TodayArrivalTable
+      :orders="todayOrders"
+      :loading="isLoading"
+      @view-detail="handleViewOrderDetail"
+      @process-check-in="handleProcessCheckIn"
+      @refresh="fetchDashboardData"
+    />
+
+    <!-- Emergency Closure Modal -->
+    <EmergencyClosureModal
+      v-model:open="isEmergencyModalOpen"
+      :current-status="metrics?.operations_today?.status_jalur || 'open'"
+      :trail-id="activeJalur?.id || activeBasecamp?.jalur_id"
+      :trail-name="activeJalur?.nama_jalur || 'Jalur Pendakian'"
+      @success="handleEmergencySuccess"
+    />
   </div>
 </template>
