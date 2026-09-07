@@ -13,7 +13,8 @@ docs/task/
 ├── 02-mitra-endpoints.md          <-- Task Backend & API Role Mitra / Basecamp (Aktif)
 ├── 03-pendaki-endpoints.md        <-- Task Backend & API Role Pendaki / Mobile (Rencana)
 ├── 04-admin-frontend.md           <-- Task Web Dashboard Frontend Admin (WBS Defined)
-└── 05-mitra-frontend.md           <-- Task Web Dashboard Frontend Mitra (WBS Defined)
+├── 05-mitra-frontend.md           <-- Task Web Dashboard Frontend Mitra (WBS Defined)
+└── 06-pendaki-frontend.md         <-- Task Web Marketplace Frontend Pendaki (WBS Defined)
 ```
 
 ---
@@ -24,9 +25,10 @@ docs/task/
 | :--- | :--- | :--- | :--- | :---: |
 | **TSK-ADM-BE** | **Admin Backend & API** | Laravel 13 API (`backend/`) | [`01-admin-endpoints.md`](01-admin-endpoints.md) | 🟡 **68% Selesai** |
 | **TSK-MIT-BE** | **Mitra Backend & API** | Laravel 13 API (`backend/`) | [`02-mitra-endpoints.md`](02-mitra-endpoints.md) | 🟢 **100% Selesai** |
-| **TSK-PND-BE** | **Pendaki Backend & API** | Laravel 13 API (`backend/`) | `03-pendaki-endpoints.md` | ⚪ *Planned* |
-| **TSK-ADM-FE** | **Admin Web Dashboard** | Vue 3 + Tailwind + shadcn-vue (`frontend/`) | [`04-admin-frontend.md`](04-admin-frontend.md) | 🔵 **WBS Defined (0%)** |
+| **TSK-PND-BE** | **Pendaki Backend & API** | Laravel 13 API (`backend/`) | `03-pendaki-endpoints.md` | 🟢 **100% Selesai (Tested & Passed)** |
+| **TSK-ADM-FE** | **Admin Web Dashboard** | Vue 3 + Tailwind + shadcn-vue (`frontend/`) | [`04-admin-frontend.md`](04-admin-frontend.md) | 🔵 **WBS Defined (48%)** |
 | **TSK-MIT-FE** | **Mitra Web Dashboard** | Vue 3 + Tailwind + shadcn-vue (`frontend/`) | [`05-mitra-frontend.md`](05-mitra-frontend.md) | 🟢 **100% Selesai (Modul 00 — 10 Passed)** |
+| **TSK-PND-FE** | **Pendaki Web E-Commerce** | Vue 3 + Tailwind + shadcn-vue (`frontend/`) | [`06-pendaki-frontend.md`](06-pendaki-frontend.md) | 🟢 **100% Selesai (Modul 00 — 10 Passed)** |
 | **TSK-PND-MO** | **Pendaki Mobile App** | Quasar Framework + Capacitor (`mobile/`) | *TBD* | ⚪ *Planned* |
 
 ---

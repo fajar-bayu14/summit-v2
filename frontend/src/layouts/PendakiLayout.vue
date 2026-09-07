@@ -1,42 +1,89 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button'
-import { Mountain } from 'lucide-vue-next'
+import { ref } from 'vue'
+import PendakiHeader from '@/components/pendaki/PendakiHeader.vue'
+import PendakiMobileNav from '@/components/pendaki/PendakiMobileNav.vue'
+import { Mountain, ShieldCheck, HeartHandshake, PhoneCall } from 'lucide-vue-next'
+
+const cartCount = ref(0)
 </script>
 
 <template>
-  <div class="min-h-screen bg-background flex flex-col">
-    <!-- Navbar -->
-    <header class="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur">
-      <div class="container mx-auto flex h-16 items-center justify-between px-4 sm:px-8">
-        <div class="flex items-center gap-2">
-          <Mountain class="h-6 w-6 text-emerald-700" />
-          <span class="font-bold text-lg tracking-tight">SUMMIT</span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium ml-2">Pendaki</span>
-        </div>
+  <div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900">
+    <!-- E-Commerce Sticky Header -->
+    <PendakiHeader :cart-item-count="cartCount" />
 
-        <nav class="hidden md:flex items-center gap-6 text-sm font-medium">
-          <router-link to="/" class="hover:text-emerald-700 transition">Portal Home</router-link>
-          <router-link to="/pendaki" class="hover:text-emerald-700 transition">Jelajah Gunung</router-link>
-          <router-link to="/mitra" class="text-muted-foreground hover:text-foreground transition">Portal Mitra</router-link>
-          <router-link to="/admin" class="text-muted-foreground hover:text-foreground transition">Portal Admin</router-link>
-        </nav>
-
-        <div class="flex items-center gap-3">
-          <Button variant="outline" size="sm">Masuk</Button>
-          <Button size="sm" class="bg-emerald-700 hover:bg-emerald-800 text-white">Daftar</Button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Content -->
-    <main class="flex-1 container mx-auto px-4 sm:px-8 py-6">
+    <!-- Main Storefront & Portal Viewport -->
+    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 md:pb-8">
       <router-view />
     </main>
 
-    <!-- Footer -->
-    <footer class="border-t py-6 bg-muted/40 text-center text-sm text-muted-foreground">
-      <div class="container mx-auto px-4">
-        &copy; {{ new Date().getFullYear() }} Summit Marketplace. All rights reserved.
+    <!-- Mobile Bottom Navigation Bar -->
+    <PendakiMobileNav :cart-item-count="cartCount" />
+
+    <!-- E-Commerce Footer -->
+    <footer class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-10 text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-auto hidden md:block">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+          <!-- Col 1: Brand Info -->
+          <div class="space-y-3">
+            <div class="flex items-center gap-2 text-slate-900 dark:text-slate-100 font-bold text-base">
+              <Mountain class="w-5 h-5 text-emerald-700" />
+              <span>SUMMIT MARKETPLACE</span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Platform terpadu pemesanan tiket SIMAKSI gunung, sewa peralatan outdoor, dan jasa porter/guide berlisensi di Indonesia.
+            </p>
+          </div>
+
+          <!-- Col 2: Navigasi Pendaki -->
+          <div class="space-y-2">
+            <p class="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">Layanan Pendaki</p>
+            <ul class="space-y-1.5 text-xs">
+              <li><router-link to="/pendaki" class="hover:text-emerald-700 transition-colors">Booking Tiket SIMAKSI</router-link></li>
+              <li><router-link to="/pendaki" class="hover:text-emerald-700 transition-colors">Rental Peralatan Camping</router-link></li>
+              <li><router-link to="/pendaki" class="hover:text-emerald-700 transition-colors">Jasa Porter &amp; Guide APGI</router-link></li>
+              <li><router-link to="/pendaki" class="hover:text-emerald-700 transition-colors">Digital Logbook &amp; E-Sertifikat</router-link></li>
+            </ul>
+          </div>
+
+          <!-- Col 3: Keamanan & Escrow -->
+          <div class="space-y-2">
+            <p class="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">Keamanan Transaksi</p>
+            <div class="space-y-2 text-xs text-slate-500">
+              <div class="flex items-center gap-2">
+                <ShieldCheck class="w-4 h-4 text-emerald-700 shrink-0" />
+                <span>Dana aman via Escrow Xendit</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <HeartHandshake class="w-4 h-4 text-emerald-700 shrink-0" />
+                <span>Garansi Refund SOP H-3 / Jalur Tutup</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Col 4: Bantuan & Kontak -->
+          <div class="space-y-2">
+            <p class="font-bold text-slate-900 dark:text-slate-100 text-xs uppercase tracking-wider">Pusat Bantuan</p>
+            <p class="text-xs text-slate-500">
+              Butuh bantuan atau koordinasi darurat jalur?
+            </p>
+            <div class="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-semibold text-xs">
+              <PhoneCall class="w-4 h-4" />
+              <span>Call Center: 0812-9999-SUMMIT</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Copyright -->
+        <div class="pt-6 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+          <p>&copy; {{ new Date().getFullYear() }} Summit Marketplace. Hak Cipta Dilindungi.</p>
+          <div class="flex items-center gap-4">
+            <router-link to="/" class="hover:underline">Syarat &amp; Ketentuan</router-link>
+            <router-link to="/" class="hover:underline">Kebijakan Privasi</router-link>
+            <router-link to="/mitra" class="hover:underline">Portal Mitra</router-link>
+            <router-link to="/admin" class="hover:underline">Portal Admin</router-link>
+          </div>
+        </div>
       </div>
     </footer>
   </div>

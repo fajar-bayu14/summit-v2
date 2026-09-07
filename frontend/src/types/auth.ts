@@ -25,6 +25,7 @@ export interface User {
   email: string
   role: UserRole
   email_verified_at?: string | null
+  telepon?: string | null
   avatar?: string | null
   created_at?: string
   updated_at?: string

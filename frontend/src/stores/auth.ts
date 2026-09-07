@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api/auth'
+import { pendakiKycApi } from '@/api/pendakiKyc'
 import { useMitraStore } from './mitra'
 import type { LoginCredentials, User, UserRole } from '@/types/auth'
 import type { AxiosError } from 'axios'
@@ -27,6 +28,28 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed<boolean>(() => user.value?.role === 'admin')
   const isMitra = computed<boolean>(() => user.value?.role === 'mitra')
   const isPendaki = computed<boolean>(() => user.value?.role === 'pendaki')
+
+  // KYC Getters for Climbers
+  const kycStatus = computed<string>(() => user.value?.pendaki?.status_verifikasi || 'unverified')
+  const isKycVerified = computed<boolean>(() => kycStatus.value === 'verified')
+  const isKycPending = computed<boolean>(() => kycStatus.value === 'pending')
+  const pendakiProfile = computed(() => user.value?.pendaki || null)
+
+  function setUserData(userData: User) {
+    user.value = userData
+    localStorage.setItem('user_data', JSON.stringify(userData))
+    syncMitraContext(userData)
+  }
+
+  function updatePendakiProfile(pendakiData: any) {
+    if (user.value) {
+      user.value = {
+        ...user.value,
+        pendaki: pendakiData,
+      }
+      localStorage.setItem('user_data', JSON.stringify(user.value))
+    }
+  }
 
   function syncMitraContext(userData: User) {
     if (userData.role === 'mitra') {
@@ -100,6 +123,20 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  async function fetchKycStatus() {
+    if (!token.value) return null
+    try {
+      const response = await pendakiKycApi.getKycStatus()
+      if (response.data) {
+        updatePendakiProfile(response.data)
+        return response.data
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
   async function logout(): Promise<void> {
     isLoading.value = true
     try {
@@ -133,9 +170,16 @@ export const useAuthStore = defineStore('auth', () => {
     isAdmin,
     isMitra,
     isPendaki,
+    kycStatus,
+    isKycVerified,
+    isKycPending,
+    pendakiProfile,
+    setUserData,
+    updatePendakiProfile,
     clearErrors,
     login,
     fetchProfile,
+    fetchKycStatus,
     logout,
   }
 })
