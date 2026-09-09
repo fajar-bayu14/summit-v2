@@ -214,3 +214,11 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/analytics/summary', [MitraAnalyticsController::class, 'summary'])->name('mitra.analytics.summary');
     });
 });
+
+Route::fallback(function () {
+    return response()->json([
+        'status' => 'error',
+        'message' => 'Endpoint API tidak ditemukan (404).',
+        'error_code' => 'ERR_NOT_FOUND',
+    ], 404);
+});

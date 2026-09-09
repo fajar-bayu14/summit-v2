@@ -14,7 +14,8 @@ docs/task/
 ├── 03-pendaki-endpoints.md        <-- Task Backend & API Role Pendaki / Mobile (Rencana)
 ├── 04-admin-frontend.md           <-- Task Web Dashboard Frontend Admin (WBS Defined)
 ├── 05-mitra-frontend.md           <-- Task Web Dashboard Frontend Mitra (WBS Defined)
-└── 06-pendaki-frontend.md         <-- Task Web Marketplace Frontend Pendaki (WBS Defined)
+├── 06-pendaki-frontend.md         <-- Task Web Marketplace Frontend Pendaki (WBS Defined)
+└── 07-qr-scan-checkin-system.md   <-- Task Sistem QR Scan & Verifikasi Check-In (WBS Defined)
 ```
 
 ---
@@ -30,6 +31,7 @@ docs/task/
 | **TSK-MIT-FE** | **Mitra Web Dashboard** | Vue 3 + Tailwind + shadcn-vue (`frontend/`) | [`05-mitra-frontend.md`](05-mitra-frontend.md) | 🟢 **100% Selesai (Modul 00 — 10 Passed)** |
 | **TSK-PND-FE** | **Pendaki Web E-Commerce** | Vue 3 + Tailwind + shadcn-vue (`frontend/`) | [`06-pendaki-frontend.md`](06-pendaki-frontend.md) | 🟢 **100% Selesai (Modul 00 — 10 Passed)** |
 | **TSK-PND-MO** | **Pendaki Mobile App** | Quasar Framework + Capacitor (`mobile/`) | *TBD* | ⚪ *Planned* |
+| **TSK-QR-SYS** | **Sistem QR Scan Check-In** | Cross-Platform (Mobile, Web, API) | [`07-qr-scan-checkin-system.md`](07-qr-scan-checkin-system.md) | ⚪ **WBS Defined (Ready)** |
 
 ---
 

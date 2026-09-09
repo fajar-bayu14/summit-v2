@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureKycVerified;
 use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\ProcessHttpOnlyCookie;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -27,6 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api/v1',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(ForceJsonResponse::class);
+
         $middleware->prependToGroup('api', AddQueuedCookiesToResponse::class);
         $middleware->prependToGroup('api', ProcessHttpOnlyCookie::class);
         $middleware->prependToGroup('api', EncryptCookies::class);
@@ -41,92 +44,108 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->command('orders:expire-pending')->everyMinute();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        // $exceptions->shouldRenderJsonWhen(
-        //     fn (Request $request) => $request->is('api/*'),
-        // );
         $exceptions->shouldRenderJsonWhen(function (Request $request, Throwable $e) {
-            if ($request->is('api/*')) {
-                return true;
+            if ($request->is('api/documentation*', 'docs*')) {
+                return false;
             }
 
-            return $request->expectsJson();
+            return true;
         });
 
         $exceptions->render(function (NotFoundHttpException $e, Request $request) {
-            if ($request->is('api/*')) {
-                if ($e->getPrevious() instanceof ModelNotFoundException) {
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'Data tidak ditemukan (404).',
-                    ], 404);
-                }
+            if ($request->is('api/documentation*', 'docs*')) {
+                return null;
+            }
 
+            if ($e->getPrevious() instanceof ModelNotFoundException) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Endpoint API tidak ditemukan (404).',
+                    'message' => 'Data tidak ditemukan (404).',
+                    'error_code' => 'ERR_MODEL_NOT_FOUND',
                 ], 404);
             }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Endpoint API tidak ditemukan (404).',
+                'error_code' => 'ERR_NOT_FOUND',
+            ], 404);
         });
 
         $exceptions->render(function (MethodNotAllowedHttpException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Method HTTP tidak diizinkan untuk endpoint ini (405). Pastikan menggunakan method yang benar (GET/POST/PUT/DELETE).',
-                ], 405);
+            if ($request->is('api/documentation*', 'docs*')) {
+                return null;
             }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => "Method HTTP {$request->method()} tidak diizinkan untuk endpoint ini (405). Pastikan menggunakan method yang benar.",
+                'error_code' => 'ERR_METHOD_NOT_ALLOWED',
+            ], 405);
         });
 
         $exceptions->render(function (AccessDeniedHttpException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Akses ditolak (403). Anda tidak memiliki izin untuk mengakses resource ini.',
-                ], 403);
+            if ($request->is('api/documentation*', 'docs*')) {
+                return null;
             }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Akses ditolak (403). Anda tidak memiliki izin untuk mengakses resource ini.',
+                'error_code' => 'ERR_FORBIDDEN',
+            ], 403);
         });
 
         $exceptions->render(function (AuthorizationException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Akses ditolak (403). Tindakan ini tidak diizinkan untuk role Anda.',
-                ], 403);
+            if ($request->is('api/documentation*', 'docs*')) {
+                return null;
             }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Akses ditolak (403). Tindakan ini tidak diizinkan untuk role Anda.',
+                'error_code' => 'ERR_UNAUTHORIZED_ACTION',
+            ], 403);
         });
 
         $exceptions->render(function (AuthenticationException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Tidak diautentikasi (401). Silakan login atau sertakan Bearer Token yang valid.',
-                ], 401);
+            if ($request->is('api/documentation*', 'docs*')) {
+                return null;
             }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Tidak diautentikasi (401). Silakan login atau sertakan Bearer Token yang valid.',
+                'error_code' => 'ERR_UNAUTHENTICATED',
+            ], 401);
         });
 
         $exceptions->render(function (ValidationException $e, Request $request) {
-            if ($request->is('api/*')) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Data yang dikirimkan tidak valid.',
-                    'errors' => $e->errors(),
-                ], 422);
+            if ($request->is('api/documentation*', 'docs*')) {
+                return null;
             }
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Data yang dikirimkan tidak valid.',
+                'error_code' => 'ERR_VALIDATION_FAILED',
+                'errors' => $e->errors(),
+            ], 422);
         });
 
         $exceptions->render(function (Throwable $e, Request $request) {
-
-            if ($request->is('api/*')) {
-
-                $statusCode = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
-
-                $message = config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan pada server. Mohon hubungi admin.';
-
-                return response()->json([
-                    'status' => 'error',
-                    'message' => $message,
-                    'debug' => config('app.debug') ? $e->getTraceAsString() : null,
-                ], $statusCode);
+            if ($request->is('api/documentation*', 'docs*')) {
+                return null;
             }
+
+            $statusCode = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
+            $message = config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan pada server. Mohon hubungi admin.';
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $message,
+                'error_code' => 'ERR_INTERNAL_SERVER',
+                'debug' => config('app.debug') ? $e->getTraceAsString() : null,
+            ], $statusCode);
         });
     })->create();
