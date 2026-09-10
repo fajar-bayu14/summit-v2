@@ -14,7 +14,7 @@ import MountainCard from '@/components/pendaki/MountainCard.vue'
 import MountainFilterSidebar from '@/components/pendaki/MountainFilterSidebar.vue'
 import { pendakiMountainsApi } from '@/api/pendakiMountains'
 import { useBookingStore } from '@/stores/booking'
-import { extractApiError } from '@/lib/normalizer'
+import { extractApiError, normalizePaginatedResponse } from '@/lib/normalizer'
 import type { GunungItem, MountainFilterParams } from '@/types/pendakiMountain'
 
 const router = useRouter()
@@ -44,7 +44,8 @@ async function fetchMountains() {
       ...filterParams,
       search: searchKeyword.value.trim() || undefined,
     })
-    mountains.value = res.data || []
+    const normalized = normalizePaginatedResponse<GunungItem>(res)
+    mountains.value = normalized.items
   } catch (err) {
     errorMessage.value = extractApiError(err).message
   } finally {

@@ -33,6 +33,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'anggotas', type: 'array', items: new OA\Items(ref: '#/components/schemas/PesananAnggotaResource')),
         new OA\Property(property: 'details', type: 'array', items: new OA\Items(ref: '#/components/schemas/DetailPesananResource')),
         new OA\Property(property: 'pembayaran', ref: '#/components/schemas/PembayaranResource'),
+        new OA\Property(property: 'refunds', type: 'array', items: new OA\Items(ref: '#/components/schemas/RefundResource')),
     ]
 )]
 class PesananResource extends JsonResource
@@ -66,6 +67,7 @@ class PesananResource extends JsonResource
             'anggotas' => PesananAnggotaResource::collection($this->whenLoaded('anggotas')),
             'details' => DetailPesananResource::collection($this->whenLoaded('details')),
             'pembayaran' => new PembayaranResource($this->whenLoaded('pembayaran')),
+            'refunds' => RefundResource::collection($this->whenLoaded('refunds')),
         ];
     }
 }

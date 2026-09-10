@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { pendakiMountainsApi } from '@/api/pendakiMountains'
+import { normalizePaginatedResponse } from '@/lib/normalizer'
 import type { GunungItem } from '@/types/pendakiMountain'
 import MountainCard from './MountainCard.vue'
 import { Compass, Loader2, Mountain, Sparkles } from 'lucide-vue-next'
@@ -20,7 +21,7 @@ async function fetchMountains() {
   loading.value = true
   try {
     const res = await pendakiMountainsApi.getMountains({ per_page: 8 })
-    mountains.value = (res.data as any)?.items || res.data || []
+    mountains.value = normalizePaginatedResponse<GunungItem>(res).items
   } catch {
     mountains.value = []
   } finally {

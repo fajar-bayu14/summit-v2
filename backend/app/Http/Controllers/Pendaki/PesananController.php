@@ -136,7 +136,7 @@ class PesananController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $query = Pesanan::with(['basecamp', 'jalur', 'pembayaran'])
+        $query = Pesanan::with(['basecamp', 'jalur', 'pembayaran', 'refunds'])
             ->where('user_id', $request->user()->id)
             ->latest();
 
@@ -176,7 +176,7 @@ class PesananController extends Controller
     public function show(Request $request, string $invoice): JsonResponse
     {
         $pesanan = Pesanan::where('invoice', $invoice)
-            ->with(['user', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran'])
+            ->with(['user', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran', 'refunds'])
             ->firstOrFail();
 
         $this->authorize('view', $pesanan);

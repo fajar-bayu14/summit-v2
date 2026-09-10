@@ -18,12 +18,16 @@ import RentalProductGrid from '@/components/pendaki/RentalProductGrid.vue'
 import PorterGuideServiceCards from '@/components/pendaki/PorterGuideServiceCards.vue'
 import { pendakiProductsApi } from '@/api/pendakiProducts'
 import { useBookingStore } from '@/stores/booking'
+import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 import { extractApiError } from '@/lib/normalizer'
 import type { ProdukCatalogItem } from '@/types/pendakiProduct'
 
 const route = useRoute()
 const router = useRouter()
 const bookingStore = useBookingStore()
+const cartStore = useCartStore()
+const authStore = useAuthStore()
 
 const basecampId = computed(() => Number(route.params.id))
 const activeTab = ref<'tiket' | 'rental' | 'jasa'>('tiket')
@@ -76,31 +80,106 @@ function showCartToast(message: string) {
   }, 4000)
 }
 
-function handleAddTicket(payload: {
+async function handleAddTicket(payload: {
   product: ProdukCatalogItem
   selectedDate: string
   climberCount: number
   totalAmount: number
 }) {
+  if (!authStore.isAuthenticated) {
+    router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    return
+  }
+
   bookingStore.setBookingDates(payload.selectedDate)
   bookingStore.setClimberCount(payload.climberCount)
-  showCartToast(`Tiket SIMAKSI (${payload.climberCount} orang) untuk tanggal ${payload.selectedDate} berhasil ditambahkan!`)
+
+  const jalurId = bookingStore.selectedTrail?.id || payload.product.tiket?.jalur_id || (cartStore.cart as any)?.jalur_id
+
+  if (!jalurId) {
+    showCartToast('Silakan pilih jalur pendakian terlebih dahulu.')
+    return
+  }
+
+  try {
+    await cartStore.addToCart({
+      produk_id: payload.product.id,
+      qty: payload.climberCount,
+      jalur_id: jalurId,
+      tanggal_booking: payload.selectedDate,
+    })
+    showCartToast(`Tiket SIMAKSI (${payload.climberCount} orang) untuk tanggal ${payload.selectedDate} berhasil ditambahkan ke keranjang!`)
+  } catch (err: any) {
+    showCartToast(err.message || 'Gagal menambahkan tiket ke keranjang.')
+  }
 }
 
-function handleAddRentalToCart(product: ProdukCatalogItem, quantity: number) {
-  showCartToast(`${quantity}x ${product.nama_produk} berhasil dimasukkan ke keranjang.`)
+async function handleAddRentalToCart(product: ProdukCatalogItem, quantity: number) {
+  if (!authStore.isAuthenticated) {
+    router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    return
+  }
+
+  const jalurId = bookingStore.selectedTrail?.id || (cartStore.cart as any)?.jalur_id
+  const tanggalBooking = bookingStore.bookingStartDate || (cartStore.cart as any)?.tanggal_booking || new Date().toISOString().split('T')[0]
+
+  if (!jalurId) {
+    showCartToast('Silakan pilih gunung & jalur terlebih dahulu.')
+    return
+  }
+
+  try {
+    await cartStore.addToCart({
+      produk_id: product.id,
+      qty: quantity,
+      jalur_id: jalurId,
+      tanggal_booking: tanggalBooking,
+      tanggal_mulai_sewa: tanggalBooking,
+      tanggal_selesai_sewa: tanggalBooking,
+    })
+    showCartToast(`${quantity}x ${product.nama_produk} berhasil dimasukkan ke keranjang.`)
+  } catch (err: any) {
+    showCartToast(err.message || 'Gagal menambahkan item ke keranjang.')
+  }
 }
 
-function handleAddService(payload: {
+async function handleAddService(payload: {
   product: ProdukCatalogItem
   quantity: number
   specialNotes: string
 }) {
-  showCartToast(`Layanan ${payload.product.nama_produk} (${payload.quantity}x) berhasil dipesan.`)
+  if (!authStore.isAuthenticated) {
+    router.push(`/login?redirect=${encodeURIComponent(route.fullPath)}`)
+    return
+  }
+
+  const jalurId = bookingStore.selectedTrail?.id || (cartStore.cart as any)?.jalur_id
+  const tanggalBooking = bookingStore.bookingStartDate || (cartStore.cart as any)?.tanggal_booking || new Date().toISOString().split('T')[0]
+
+  if (!jalurId) {
+    showCartToast('Silakan pilih gunung & jalur terlebih dahulu.')
+    return
+  }
+
+  try {
+    await cartStore.addToCart({
+      produk_id: payload.product.id,
+      qty: payload.quantity,
+      jalur_id: jalurId,
+      tanggal_booking: tanggalBooking,
+      catatan_item: payload.specialNotes ? { notes: payload.specialNotes } : undefined,
+    })
+    showCartToast(`Layanan ${payload.product.nama_produk} (${payload.quantity}x) berhasil dipesan.`)
+  } catch (err: any) {
+    showCartToast(err.message || 'Gagal menambahkan layanan ke keranjang.')
+  }
 }
 
-onMounted(() => {
+onMounted(async () => {
   fetchStorefrontProducts()
+  if (authStore.isAuthenticated && !cartStore.cart) {
+    await cartStore.fetchCart()
+  }
 })
 </script>
 
@@ -134,7 +213,7 @@ onMounted(() => {
         <CheckCircle2 class="w-4 h-4 text-emerald-300" />
         <span>{{ cartToastMessage }}</span>
       </div>
-      <router-link to="/pendaki" class="text-xs font-bold underline hover:text-emerald-200 shrink-0">
+      <router-link to="/pendaki/cart" class="text-xs font-bold underline hover:text-emerald-200 shrink-0">
         Lihat Keranjang
       </router-link>
     </div>

@@ -53,6 +53,12 @@ Route::post('/payments/webhook/xendit-disbursement', [XenditDisbursementWebhookC
 Route::get('/ads/banners', [PublicBannerAdController::class, 'index'])->name('ads.banners.index');
 Route::post('/ads/banners/{id}/click', [PublicBannerAdController::class, 'click'])->name('ads.banners.click');
 
+// Public Gunung, Jalur & Product catalog endpoints (Climber / Guests)
+Route::get('/mountains', [PendakiGunungController::class, 'index'])->name('gunung.index');
+Route::get('/mountains/{id}', [PendakiGunungController::class, 'show'])->name('gunung.show');
+Route::get('/products', [PendakiProductController::class, 'index'])->name('products.index');
+Route::get('/products/{id}', [PendakiProductController::class, 'show'])->name('products.show');
+
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
@@ -60,14 +66,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // KYC endpoints for Climber (Pendaki)
     Route::post('/kyc/submit', [PendakiKycController::class, 'submit'])->name('kyc.submit');
     Route::get('/kyc/status', [PendakiKycController::class, 'status'])->name('kyc.status');
-
-    // Gunung & Jalur endpoints for Climber (Pendaki) - Read-only
-    Route::get('/mountains', [PendakiGunungController::class, 'index'])->name('gunung.index');
-    Route::get('/mountains/{id}', [PendakiGunungController::class, 'show'])->name('gunung.show');
-
-    // Product endpoints for Climber (Pendaki) - Read-only
-    Route::get('/products', [PendakiProductController::class, 'index'])->name('products.index');
-    Route::get('/products/{id}', [PendakiProductController::class, 'show'])->name('products.show');
 
     // Booking transaction endpoints for Climber (Pendaki)
     Route::post('/orders', [PendakiPesananController::class, 'store'])->name('pesanan.store');

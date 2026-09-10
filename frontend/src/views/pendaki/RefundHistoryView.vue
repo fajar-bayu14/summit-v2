@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { pendakiOrdersApi } from '@/api/pendakiOrders'
-import type { PesananDetail, PesananItem } from '@/types/pendakiOrder'
+import type { PesananItem } from '@/types/pendakiOrder'
 import type { RefundItem } from '@/types/pendakiRefund'
 import RefundTimelineCard from '@/components/pendaki/RefundTimelineCard.vue'
 import DisputeEscalationModal from '@/components/pendaki/DisputeEscalationModal.vue'
@@ -57,44 +57,44 @@ onMounted(() => {
 // Extract all refunds from orders or build refund representations
 const allRefunds = computed<RefundItem[]>(() => {
   const refunds: RefundItem[] = []
-  orders.value.forEach((order: PesananDetail) => {
-    // If order has a refund property or is cancelled with refund note
-    if (order.status === 'cancelled' || (order as any).refund) {
-      const rawRefund = (order as any).refund
-      const r: RefundItem = rawRefund
-        ? {
-            ...rawRefund,
-            pesanan: rawRefund.pesanan || {
-              id: order.id,
-              invoice: order.invoice,
-              total_bayar: order.total_bayar,
-              tanggal_booking: order.tanggal_booking,
-              status: order.status,
-              basecamp: order.basecamp,
-              jalur: order.jalur
-            }
-          }
-        : {
+  orders.value.forEach((order: any) => {
+    const orderRefunds = Array.isArray(order.refunds) ? order.refunds : (order.refund ? [order.refund] : [])
+    if (orderRefunds.length > 0) {
+      orderRefunds.forEach((rf: any) => {
+        refunds.push({
+          ...rf,
+          pesanan: rf.pesanan || {
             id: order.id,
-            pesanan_id: order.id,
-            nominal: order.total_bayar,
-            status: 'pending',
-            alasan: 'Pengajuan pembatalan / refund',
-            bank_tujuan: 'BCA',
-            rekening_tujuan: '-',
-            nama_tujuan: order.user?.name || 'Pendaki',
-            created_at: order.created_at,
-            pesanan: {
-              id: order.id,
-              invoice: order.invoice,
-              total_bayar: order.total_bayar,
-              tanggal_booking: order.tanggal_booking,
-              status: order.status,
-              basecamp: order.basecamp,
-              jalur: order.jalur
-            }
+            invoice: order.invoice,
+            total_bayar: order.total_bayar,
+            tanggal_booking: order.tanggal_booking,
+            status: order.status,
+            basecamp: order.basecamp,
+            jalur: order.jalur
           }
-      refunds.push(r)
+        })
+      })
+    } else if (order.status === 'cancelled') {
+      refunds.push({
+        id: order.id,
+        pesanan_id: order.id,
+        nominal: order.total_bayar,
+        status: 'pending',
+        alasan: 'Pengajuan pembatalan / refund',
+        bank_tujuan: 'Transfer Bank',
+        rekening_tujuan: '-',
+        nama_tujuan: order.user?.name || 'Pendaki',
+        created_at: order.created_at,
+        pesanan: {
+          id: order.id,
+          invoice: order.invoice,
+          total_bayar: order.total_bayar,
+          tanggal_booking: order.tanggal_booking,
+          status: order.status,
+          basecamp: order.basecamp,
+          jalur: order.jalur
+        }
+      })
     }
   })
   return refunds

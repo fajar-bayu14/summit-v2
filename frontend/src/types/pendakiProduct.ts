@@ -70,4 +70,5 @@ export interface ProductFilterParams {
   kategori?: KategoriProdukEnum | string
   search?: string
   page?: number
+  per_page?: number
 }

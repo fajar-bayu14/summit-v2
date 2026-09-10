@@ -8651,6 +8651,12 @@
                     },
                     "pembayaran": {
                         "$ref": "#/components/schemas/PembayaranResource"
+                    },
+                    "refunds": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RefundResource"
+                        }
                     }
                 },
                 "type": "object"

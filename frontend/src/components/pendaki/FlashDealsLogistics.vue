@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { pendakiProductsApi } from '@/api/pendakiProducts'
 import { formatRupiah } from '@/lib/formatters'
 import { Flame, ShieldCheck, ShoppingBag, Star, Zap } from 'lucide-vue-next'
 
@@ -13,9 +15,10 @@ interface DealItem {
   rating: number
   tersewa: number
   basecamp: string
+  basecampId?: number
 }
 
-const deals: DealItem[] = [
+const defaultDeals: DealItem[] = [
   {
     id: 1,
     nama: 'Paket Tenda Dome 4P Double Layer + Footprint Waterproof',
@@ -65,6 +68,46 @@ const deals: DealItem[] = [
     basecamp: 'Basecamp Kaliwurang'
   }
 ]
+
+const deals = ref<DealItem[]>(defaultDeals)
+const loading = ref(false)
+
+async function fetchProducts() {
+  loading.value = true
+  try {
+    const res = await pendakiProductsApi.getProducts({ per_page: 8 })
+    const items = (res.data as any)?.items || (res.data as any)?.data || (Array.isArray(res.data) ? res.data : [])
+    const nonTickets = items.filter((p: any) => p.kategori !== 'tiket')
+    if (nonTickets.length > 0) {
+      deals.value = nonTickets.slice(0, 4).map((p: any, idx: number) => {
+        const harga = Number(p.harga) || 50000
+        const diskon = [20, 25, 30, 15][idx % 4]
+        const hargaAsli = Math.round(harga * (100 / (100 - diskon)))
+        return {
+          id: p.id,
+          nama: p.nama_produk,
+          kategori: p.kategori === 'rental' ? 'Sewa Alat Outdoor' : (p.kategori === 'jasa' ? 'Pemandu & Porter' : p.kategori),
+          hargaAsli,
+          hargaDiskon: harga,
+          diskonPersen: diskon,
+          gambar: p.foto || defaultDeals[idx % defaultDeals.length].gambar,
+          rating: 4.8 + (idx % 3) * 0.1,
+          tersewa: 50 + p.id * 12,
+          basecamp: p.basecamp?.nama_basecamp || 'Basecamp Mitra',
+          basecampId: p.basecamp_id
+        }
+      })
+    }
+  } catch {
+    // Keep defaultDeals
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchProducts()
+})
 </script>
 
 <template>
