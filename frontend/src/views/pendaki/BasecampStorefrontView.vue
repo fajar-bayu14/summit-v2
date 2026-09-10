@@ -234,7 +234,7 @@ onMounted(async () => {
             {{ basecampInfo?.nama_basecamp || 'Basecamp Pengelola' }}
           </h1>
           <p class="text-xs text-slate-500 flex items-center gap-2">
-            <span>Mitra: {{ basecampInfo?.mitra?.nama_mitra || 'Paguyuban Pengelola Basecamp' }}</span>
+            <span>Mitra: {{ basecampInfo?.mitra?.nama_mitra || basecampInfo?.mitra?.nama_pemilik || 'Paguyuban Pengelola Basecamp' }}</span>
             <span>•</span>
             <span class="flex items-center gap-1">
               <Clock class="w-3.5 h-3.5 text-slate-400" />

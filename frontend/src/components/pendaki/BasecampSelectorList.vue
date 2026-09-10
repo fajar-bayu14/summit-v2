@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import {
   Building2,
   Clock,
@@ -20,7 +21,7 @@ const emit = defineEmits<{
   (e: 'select-basecamp', basecamp: BasecampMitraSummary): void
 }>()
 
-const basecamps = props.trail.basecamps || []
+const basecamps = computed(() => props.trail.basecamps || [])
 </script>
 
 <template>
@@ -72,15 +73,15 @@ const basecamps = props.trail.basecamps || []
               <h5 class="font-bold text-sm text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                 <span>{{ bc.nama_basecamp }}</span>
                 <span
-                  v-if="bc.mitra?.is_verified"
+                  v-if="bc.mitra?.is_verified || bc.mitra?.status === 'aktif'"
                   title="Mitra Resmi Terverifikasi"
                   class="text-emerald-600"
                 >
                   <ShieldCheck class="w-4 h-4 inline-block" />
                 </span>
               </h5>
-              <p v-if="bc.mitra?.nama_mitra" class="text-xs text-slate-500">
-                Pengelola: {{ bc.mitra.nama_mitra }}
+              <p v-if="bc.mitra?.nama_mitra || bc.mitra?.nama_pemilik" class="text-xs text-slate-500">
+                Pengelola: {{ bc.mitra?.nama_mitra || bc.mitra?.nama_pemilik }}
               </p>
             </div>
 

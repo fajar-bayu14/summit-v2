@@ -36,8 +36,8 @@ class GunungController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        // Eager load jalurs to avoid N+1 query problems
-        $gunungs = Gunung::with('jalurs')->paginate(15);
+        // Eager load jalurs and their basecamps to avoid N+1 query problems
+        $gunungs = Gunung::with(['jalurs.basecamps'])->paginate(15);
 
         return response()->json([
             'status' => 'success',
@@ -72,7 +72,7 @@ class GunungController extends Controller
     )]
     public function show(int $id): JsonResponse
     {
-        $gunung = Gunung::with('jalurs')->findOrFail($id);
+        $gunung = Gunung::with(['jalurs.basecamps.mitra'])->findOrFail($id);
 
         return response()->json([
             'status' => 'success',

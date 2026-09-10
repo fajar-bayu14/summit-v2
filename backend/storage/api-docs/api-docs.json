@@ -8200,6 +8200,14 @@
                         "type": "string",
                         "example": "Budi Santoso"
                     },
+                    "nama_mitra": {
+                        "type": "string",
+                        "example": "Budi Santoso"
+                    },
+                    "is_verified": {
+                        "type": "boolean",
+                        "example": true
+                    },
                     "telepon": {
                         "type": "string",
                         "example": "081234567890"

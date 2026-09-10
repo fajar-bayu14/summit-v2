@@ -13,8 +13,10 @@ export interface BasecampMitraSummary {
   mitra?: {
     id: number
     nama_mitra?: string
+    nama_pemilik?: string
     badan_usaha?: string
     is_verified?: boolean
+    status?: string
     telepon?: string
   }
 }

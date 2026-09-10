@@ -60,7 +60,8 @@ export interface ProdukCatalogItem {
     jam_operasional?: string
     mitra?: {
       id: number
-      nama_mitra: string
+      nama_mitra?: string
+      nama_pemilik?: string
     }
   }
 }

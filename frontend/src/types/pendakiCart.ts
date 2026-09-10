@@ -27,7 +27,8 @@ export interface Cart {
     nama_basecamp: string
     mitra?: {
       id: number
-      nama_mitra: string
+      nama_mitra?: string
+      nama_pemilik?: string
     }
   }
   jalur?: {
