@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+  import.meta.env.VITE_API_BASE_URL || 'http://summit.test/api/v1'
 
 export class ApiError extends Error {
   constructor(message, status = 0, errors = null) {

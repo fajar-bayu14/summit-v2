@@ -9,7 +9,7 @@ export function getStorageUrl(path: string | null | undefined, fallback = '/imag
   }
 
   const trimmed = path.trim()
-  const backendBase = (import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://127.0.0.1:8000').replace(/\/$/, '')
+  const backendBase = (import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://summit.test').replace(/\/$/, '')
 
   // If path is a blob or data URI (from FileReader or URL.createObjectURL)
   if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) {

@@ -17,6 +17,6 @@ export async function getBadges() {
 
 export function getCertificateUrl(invoice) {
   const baseUrl =
-    import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
+    import.meta.env.VITE_API_BASE_URL || 'http://summit.test/api/v1'
   return `${baseUrl}/orders/${encodeURIComponent(invoice)}/certificate`
 }
