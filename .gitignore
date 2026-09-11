@@ -5,3 +5,10 @@ graphify-out/
 .DS_Store
 Thumbs.db
 dump-file/
+
+# Environment files
+.env
+.env.*
+.env.local
+.env.production
+!.env.example
