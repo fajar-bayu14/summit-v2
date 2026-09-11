@@ -36,6 +36,7 @@ const isMountainActive = computed(() => {
         :alt="mountain.nama_gunung"
         class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-500 ease-out"
         loading="lazy"
+        @error="e => ((e.target as HTMLImageElement).src = '/images/hero-summit.jpg')"
       />
       <div
         v-else

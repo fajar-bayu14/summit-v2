@@ -115,6 +115,7 @@ onMounted(() => {
           :src="mountain.foto"
           :alt="mountain.nama_gunung"
           class="absolute inset-0 h-full w-full object-cover object-center opacity-45"
+          @error="e => ((e.target as HTMLImageElement).src = '/images/hero-summit.jpg')"
         />
         <div class="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent"></div>
 

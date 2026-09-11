@@ -38,7 +38,7 @@ class ProductController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $query = Produk::where('is_active', true)->with(['basecamp', 'opentrip', 'tiket.kuotas']);
+        $query = Produk::where('is_active', true)->with(['basecamp.mitra', 'basecamp.jalur.gunung', 'opentrip', 'tiket.kuotas']);
 
         if ($request->filled('basecamp_id')) {
             $query->where('basecamp_id', $request->query('basecamp_id'));

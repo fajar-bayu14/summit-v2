@@ -19,6 +19,7 @@ export interface BasecampMitraSummary {
     status?: string
     telepon?: string
   }
+  jalur?: JalurDetail
 }
 
 export interface JalurDetail {
@@ -34,6 +35,7 @@ export interface JalurDetail {
   status: TrailStatus
   basecamps?: BasecampMitraSummary[]
   basecamps_count?: number
+  gunung?: GunungItem
 }
 
 export interface GunungItem {

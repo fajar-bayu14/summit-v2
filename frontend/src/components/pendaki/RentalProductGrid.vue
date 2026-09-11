@@ -34,7 +34,7 @@ const categoryTabs = [
 const filteredProducts = computed(() => {
   return props.products.filter(item => {
     // Only show rental / non-ticket products in this grid
-    if (item.kategori === 'tiket') return false
+    if (item.kategori === 'tiket' || item.kategori === 'ticket') return false
 
     // Tab filter
     if (activeCategoryTab.value !== 'all') {

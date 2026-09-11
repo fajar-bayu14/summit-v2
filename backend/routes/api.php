@@ -22,6 +22,7 @@ use App\Http\Controllers\Mitra\RefundController as MitraRefundController;
 use App\Http\Controllers\Mitra\StaffController as MitraStaffController;
 use App\Http\Controllers\Mitra\TrailController as MitraTrailController;
 use App\Http\Controllers\Mitra\WalletController as MitraWalletController;
+use App\Http\Controllers\Pendaki\BasecampController as PendakiBasecampController;
 use App\Http\Controllers\Pendaki\CartController as PendakiCartController;
 use App\Http\Controllers\Pendaki\GunungController as PendakiGunungController;
 use App\Http\Controllers\Pendaki\KycController as PendakiKycController;
@@ -56,6 +57,7 @@ Route::post('/ads/banners/{id}/click', [PublicBannerAdController::class, 'click'
 // Public Gunung, Jalur & Product catalog endpoints (Climber / Guests)
 Route::get('/mountains', [PendakiGunungController::class, 'index'])->name('gunung.index');
 Route::get('/mountains/{id}', [PendakiGunungController::class, 'show'])->name('gunung.show');
+Route::get('/basecamps/{id}', [PendakiBasecampController::class, 'show'])->name('basecamps.show');
 Route::get('/products', [PendakiProductController::class, 'index'])->name('products.index');
 Route::get('/products/{id}', [PendakiProductController::class, 'show'])->name('products.show');
 

@@ -57,6 +57,7 @@ function handleAddToCart() {
         :alt="product.nama_produk"
         class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
         loading="lazy"
+        @error="e => ((e.target as HTMLImageElement).src = '/images/hero-summit.jpg')"
       />
       <div v-else class="flex flex-col items-center justify-center text-slate-400">
         <Tent class="w-10 h-10 mb-1 opacity-60" />

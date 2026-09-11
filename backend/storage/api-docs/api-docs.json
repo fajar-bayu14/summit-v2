@@ -5873,6 +5873,54 @@
                 ]
             }
         },
+        "/api/v1/basecamps/{id}": {
+            "get": {
+                "tags": [
+                    "Basecamp (Climber)"
+                ],
+                "summary": "Get details of a specific basecamp for climbers (Pendaki/Public)",
+                "operationId": "37cc7894f4855c25c9ab126741d81147",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "Basecamp ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Basecamp details retrieved successfully",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Basecamp details fetched successfully."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/BasecampResource"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Basecamp not found"
+                    }
+                }
+            }
+        },
         "/api/v1/cart": {
             "get": {
                 "tags": [
@@ -9179,6 +9227,10 @@
         {
             "name": "Wallet (Mitra)",
             "description": "Wallet (Mitra)"
+        },
+        {
+            "name": "Basecamp (Climber)",
+            "description": "Basecamp (Climber)"
         },
         {
             "name": "Cart (Climber)",

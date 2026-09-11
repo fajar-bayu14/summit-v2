@@ -17,11 +17,13 @@ import TicketQuotaCalendar from '@/components/pendaki/TicketQuotaCalendar.vue'
 import RentalProductGrid from '@/components/pendaki/RentalProductGrid.vue'
 import PorterGuideServiceCards from '@/components/pendaki/PorterGuideServiceCards.vue'
 import { pendakiProductsApi } from '@/api/pendakiProducts'
+import { pendakiBasecampsApi } from '@/api/pendakiBasecamps'
 import { useBookingStore } from '@/stores/booking'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
 import { extractApiError } from '@/lib/normalizer'
 import type { ProdukCatalogItem } from '@/types/pendakiProduct'
+import type { BasecampMitraSummary } from '@/types/pendakiMountain'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,39 +35,74 @@ const basecampId = computed(() => Number(route.params.id))
 const activeTab = ref<'tiket' | 'rental' | 'jasa'>('tiket')
 
 const products = ref<ProdukCatalogItem[]>([])
+const basecampDetail = ref<BasecampMitraSummary | null>(null)
 const isLoading = ref(true)
 const errorMessage = ref<string | null>(null)
 const cartToastMessage = ref<string | null>(null)
 
-// Computed categories
+// Computed categories supporting both backend enum and frontend tags
 const ticketProduct = computed(() => {
-  return products.value.find(p => p.kategori === 'tiket') || null
+  return products.value.find(p => p.kategori === 'ticket' || p.kategori === 'tiket') || null
 })
 
 const rentalProducts = computed(() => {
-  return products.value.filter(p => p.kategori === 'rental' || p.kategori === 'merchandise' || p.kategori === 'konsumsi')
+  return products.value.filter(p =>
+    ['rental', 'merchandise', 'konsumsi', 'kuliner'].includes(p.kategori)
+  )
 })
 
 const serviceProducts = computed(() => {
-  return products.value.filter(p => p.kategori === 'jasa')
+  return products.value.filter(p =>
+    ['jasa', 'guide', 'porter', 'transport', 'parkir'].includes(p.kategori)
+  )
 })
 
 const basecampInfo = computed(() => {
+  if (basecampDetail.value) {
+    return basecampDetail.value
+  }
   if (products.value.length > 0 && products.value[0].basecamp) {
     return products.value[0].basecamp
   }
   return bookingStore.selectedBasecamp || null
 })
 
-async function fetchStorefrontProducts() {
+async function fetchStorefrontData() {
   if (!basecampId.value) return
   isLoading.value = true
   errorMessage.value = null
+
   try {
-    const res = await pendakiProductsApi.getProducts({
-      basecamp_id: basecampId.value,
-    })
-    products.value = res.data || []
+    const [productsRes, basecampRes] = await Promise.allSettled([
+      pendakiProductsApi.getProducts({
+        basecamp_id: basecampId.value,
+      }),
+      pendakiBasecampsApi.getBasecampById(basecampId.value),
+    ])
+
+    if (productsRes.status === 'fulfilled') {
+      const payload: any = productsRes.value?.data
+      if (Array.isArray(payload)) {
+        products.value = payload
+      } else if (payload && typeof payload === 'object' && Array.isArray(payload.data)) {
+        products.value = payload.data
+      } else {
+        products.value = []
+      }
+    } else {
+      errorMessage.value = extractApiError(productsRes.reason).message
+    }
+
+    if (basecampRes.status === 'fulfilled' && basecampRes.value.data) {
+      basecampDetail.value = basecampRes.value.data
+      bookingStore.selectBasecamp(basecampDetail.value)
+      if (basecampDetail.value.jalur) {
+        bookingStore.selectTrail(basecampDetail.value.jalur)
+        if (basecampDetail.value.jalur.gunung) {
+          bookingStore.selectMountain(basecampDetail.value.jalur.gunung)
+        }
+      }
+    }
   } catch (err) {
     errorMessage.value = extractApiError(err).message
   } finally {
@@ -94,7 +131,12 @@ async function handleAddTicket(payload: {
   bookingStore.setBookingDates(payload.selectedDate)
   bookingStore.setClimberCount(payload.climberCount)
 
-  const jalurId = bookingStore.selectedTrail?.id || payload.product.tiket?.jalur_id || (cartStore.cart as any)?.jalur_id
+  const jalurId =
+    bookingStore.selectedTrail?.id ||
+    basecampInfo.value?.jalur_id ||
+    (basecampInfo.value as any)?.jalur?.id ||
+    payload.product.tiket?.jalur_id ||
+    (cartStore.cart as any)?.jalur_id
 
   if (!jalurId) {
     showCartToast('Silakan pilih jalur pendakian terlebih dahulu.')
@@ -120,7 +162,11 @@ async function handleAddRentalToCart(product: ProdukCatalogItem, quantity: numbe
     return
   }
 
-  const jalurId = bookingStore.selectedTrail?.id || (cartStore.cart as any)?.jalur_id
+  const jalurId =
+    bookingStore.selectedTrail?.id ||
+    basecampInfo.value?.jalur_id ||
+    (basecampInfo.value as any)?.jalur?.id ||
+    (cartStore.cart as any)?.jalur_id
   const tanggalBooking = bookingStore.bookingStartDate || (cartStore.cart as any)?.tanggal_booking || new Date().toISOString().split('T')[0]
 
   if (!jalurId) {
@@ -153,7 +199,11 @@ async function handleAddService(payload: {
     return
   }
 
-  const jalurId = bookingStore.selectedTrail?.id || (cartStore.cart as any)?.jalur_id
+  const jalurId =
+    bookingStore.selectedTrail?.id ||
+    basecampInfo.value?.jalur_id ||
+    (basecampInfo.value as any)?.jalur?.id ||
+    (cartStore.cart as any)?.jalur_id
   const tanggalBooking = bookingStore.bookingStartDate || (cartStore.cart as any)?.tanggal_booking || new Date().toISOString().split('T')[0]
 
   if (!jalurId) {
@@ -176,7 +226,7 @@ async function handleAddService(payload: {
 }
 
 onMounted(async () => {
-  fetchStorefrontProducts()
+  fetchStorefrontData()
   if (authStore.isAuthenticated && !cartStore.cart) {
     await cartStore.fetchCart()
   }
@@ -197,10 +247,10 @@ onMounted(async () => {
       </button>
 
       <!-- Selection Indicator -->
-      <div v-if="bookingStore.selectedMountain" class="hidden sm:flex items-center gap-2 text-xs text-slate-500">
-        <span>Gunung: <strong class="text-slate-900 dark:text-slate-100">{{ bookingStore.mountainName }}</strong></span>
+      <div v-if="bookingStore.selectedMountain || (basecampInfo as any)?.jalur?.gunung" class="hidden sm:flex items-center gap-2 text-xs text-slate-500">
+        <span>Gunung: <strong class="text-slate-900 dark:text-slate-100">{{ bookingStore.mountainName || (basecampInfo as any)?.jalur?.gunung?.nama_gunung }}</strong></span>
         <span>•</span>
-        <span>Jalur: <strong class="text-slate-900 dark:text-slate-100">{{ bookingStore.trailName }}</strong></span>
+        <span>Jalur: <strong class="text-slate-900 dark:text-slate-100">{{ bookingStore.trailName || (basecampInfo as any)?.jalur?.nama_jalur }}</strong></span>
       </div>
     </div>
 
@@ -308,7 +358,7 @@ onMounted(async () => {
       <AlertCircle class="w-10 h-10 mx-auto" />
       <h3 class="font-bold text-base">Gagal Memuat Produk Basecamp</h3>
       <p class="text-xs opacity-90">{{ errorMessage }}</p>
-      <Button size="sm" variant="outline" class="rounded-xl text-xs" @click="fetchStorefrontProducts">
+      <Button size="sm" variant="outline" class="rounded-xl text-xs" @click="fetchStorefrontData">
         Coba Lagi
       </Button>
     </div>

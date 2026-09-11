@@ -56,6 +56,8 @@ export interface ProdukCatalogItem {
   opentrip?: ProdukOpentripDetail | null
   basecamp?: {
     id: number
+    mitra_id?: number
+    jalur_id?: number
     nama_basecamp: string
     jam_operasional?: string
     mitra?: {
@@ -63,6 +65,7 @@ export interface ProdukCatalogItem {
       nama_mitra?: string
       nama_pemilik?: string
     }
+    jalur?: any
   }
 }
 
