@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureKycVerified;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\ProcessHttpOnlyCookie;
+use App\Http\Middleware\VerifyXenditWebhook;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Console\Scheduling\Schedule;
@@ -37,6 +38,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => EnsureRole::class,
             'kyc.verified' => EnsureKycVerified::class,
+            'xendit.webhook' => VerifyXenditWebhook::class,
         ]);
         $middleware->trustProxies(at: '*');
     })

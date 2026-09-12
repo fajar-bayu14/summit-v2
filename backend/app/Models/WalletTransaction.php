@@ -13,6 +13,7 @@ class WalletTransaction extends Model
     protected $fillable = [
         'wallet_id',
         'pesanan_id',
+        'withdrawal_id',
         'type',
         'nominal',
         'saldo_pending_after',
@@ -37,5 +38,10 @@ class WalletTransaction extends Model
     public function pesanan(): BelongsTo
     {
         return $this->belongsTo(Pesanan::class);
+    }
+
+    public function withdrawal(): BelongsTo
+    {
+        return $this->belongsTo(Withdrawal::class);
     }
 }

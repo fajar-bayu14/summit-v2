@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Pembayaran;
 use App\Models\Pesanan;
 use GuzzleHttp\Exception\GuzzleException;
+use Illuminate\Support\Facades\Log;
 use Xendit\Invoice\CreateInvoiceRequest;
 use Xendit\Invoice\Invoice;
 use Xendit\Invoice\InvoiceApi;
@@ -55,5 +56,26 @@ class XenditService
             null,
             'application/json'
         );
+    }
+
+    /**
+     * Retrieve an invoice from Xendit API by its ID.
+     */
+    public function getInvoice(string $xenditInvoiceId): ?Invoice
+    {
+        if ($xenditInvoiceId === '') {
+            return null;
+        }
+
+        try {
+            return $this->invoiceApi->getInvoiceById($xenditInvoiceId);
+        } catch (\Throwable $e) {
+            Log::warning('Gagal mengambil data invoice dari Xendit', [
+                'xendit_invoice_id' => $xenditInvoiceId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 }

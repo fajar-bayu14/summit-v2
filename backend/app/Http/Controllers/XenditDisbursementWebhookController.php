@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Withdrawal;
-use App\Services\EscrowService;
+use App\Jobs\ProcessXenditDisbursementWebhookJob;
+use App\Models\WebhookEvent;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
@@ -12,7 +13,7 @@ class XenditDisbursementWebhookController extends Controller
 {
     #[OA\Post(
         path: '/api/v1/payments/webhook/xendit-disbursement',
-        summary: 'Handle Xendit Iris Disbursement callback (COMPLETED / FAILED)',
+        summary: 'Handle Xendit Iris Disbursement callback (COMPLETED / FAILED / REVERSED)',
         tags: ['Payments'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -28,39 +29,40 @@ class XenditDisbursementWebhookController extends Controller
         ),
         responses: [
             new OA\Response(response: 200, description: 'Disbursement webhook acknowledged'),
-            new OA\Response(response: 404, description: 'Withdrawal record not found'),
+            new OA\Response(response: 401, description: 'Unauthorized: Invalid or missing token'),
         ]
     )]
-    public function handle(Request $request, EscrowService $escrowService): JsonResponse
+    public function handle(Request $request): JsonResponse
     {
         $payload = $request->input();
-        $disbursementId = $payload['id'] ?? null;
-        $externalId = $payload['external_id'] ?? null;
+        $disbursementId = (string) ($payload['id'] ?? '');
+        $externalId = (string) ($payload['external_id'] ?? '');
+        $status = (string) ($payload['status'] ?? '');
+        $amount = (string) ($payload['amount'] ?? '');
 
-        $withdrawal = null;
-        if ($externalId) {
-            $withdrawalId = (int) str_replace('WD-', '', $externalId);
-            $withdrawal = Withdrawal::find($withdrawalId);
-        }
-        if (! $withdrawal && $disbursementId) {
-            $withdrawal = Withdrawal::where('disbursement_id', $disbursementId)->first();
-        }
+        $headerId = $request->header('webhook-id');
+        $eventId = (string) ($headerId ?: hash('sha256', "xendit:disbursement:{$disbursementId}:{$status}:{$amount}:{$externalId}"));
 
-        if (! $withdrawal) {
+        try {
+            $event = WebhookEvent::create([
+                'provider' => 'xendit',
+                'event_id' => $eventId,
+                'event_type' => isset($payload['status']) ? 'disbursement.'.strtolower((string) $payload['status']) : 'disbursement.unknown',
+                'resource_type' => 'withdrawal',
+                'resource_id' => $externalId !== '' ? $externalId : ($disbursementId !== '' ? $disbursementId : null),
+                'payload' => $payload,
+                'ip_address' => $request->ip(),
+                'verification_status' => 'verified',
+                'processing_status' => 'pending',
+            ]);
+        } catch (UniqueConstraintViolationException $e) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Catatan penarikan dana tidak ditemukan.',
-            ], 404);
+                'status' => 'success',
+                'message' => 'Event webhook duplikat telah diterima sebelumnya.',
+            ], 200);
         }
 
-        $status = strtoupper((string) ($payload['status'] ?? ''));
-
-        if (in_array($status, ['COMPLETED', 'SUCCESS', 'DISBURSED'], true)) {
-            $escrowService->settleWithdrawalSuccess($withdrawal, $disbursementId);
-        } elseif ($status === 'FAILED') {
-            $failureReason = $payload['failure_code'] ?? ($payload['failure_message'] ?? 'Transfer ditolak oleh bank tujuan.');
-            $escrowService->handleWithdrawalFailure($withdrawal, $failureReason);
-        }
+        ProcessXenditDisbursementWebhookJob::dispatch($event->id);
 
         return response()->json([
             'status' => 'success',

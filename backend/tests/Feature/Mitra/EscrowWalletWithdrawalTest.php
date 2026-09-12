@@ -102,7 +102,10 @@ test('webhook paid incoming credits escrow pending balance in wallet', function 
         'payment_method' => 'QR_CODE',
     ];
 
-    $this->postJson(route('xendit.webhook'), $payload)->assertStatus(200);
+    $token = config('services.xendit.callback_token');
+
+    $this->withHeader('x-callback-token', $token)
+        ->postJson(route('xendit.webhook'), $payload)->assertStatus(200);
 
     // Assert Wallet has 90,000 pending balance
     $wallet = Wallet::where('mitra_id', $this->mitra->id)->first();
@@ -215,12 +218,15 @@ test('xendit disbursement webhook settles completed payout', function () {
         'status' => 'processing',
     ]);
 
-    $this->postJson(route('xendit.disbursement.webhook'), [
-        'id' => 'disb_test_xyz123',
-        'external_id' => 'WD-'.$withdrawal->id,
-        'status' => 'COMPLETED',
-        'amount' => 100000,
-    ])->assertStatus(200);
+    $token = config('services.xendit.callback_token');
+
+    $this->withHeader('x-callback-token', $token)
+        ->postJson(route('xendit.disbursement.webhook'), [
+            'id' => 'disb_test_xyz123',
+            'external_id' => 'WD-'.$withdrawal->id,
+            'status' => 'COMPLETED',
+            'amount' => 100000,
+        ])->assertStatus(200);
 
     $withdrawal->refresh();
     expect($withdrawal->status)->toBe('completed');
@@ -249,12 +255,15 @@ test('xendit disbursement webhook failure reverts locked funds back to available
         'status' => 'processing',
     ]);
 
-    $this->postJson(route('xendit.disbursement.webhook'), [
-        'id' => 'disb_failed_123',
-        'external_id' => 'WD-'.$withdrawal->id,
-        'status' => 'FAILED',
-        'failure_code' => 'INVALID_ACCOUNT_NUMBER',
-    ])->assertStatus(200);
+    $token = config('services.xendit.callback_token');
+
+    $this->withHeader('x-callback-token', $token)
+        ->postJson(route('xendit.disbursement.webhook'), [
+            'id' => 'disb_failed_123',
+            'external_id' => 'WD-'.$withdrawal->id,
+            'status' => 'FAILED',
+            'failure_code' => 'INVALID_ACCOUNT_NUMBER',
+        ])->assertStatus(200);
 
     $withdrawal->refresh();
     expect($withdrawal->status)->toBe('failed');

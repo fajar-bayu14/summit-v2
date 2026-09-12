@@ -39,9 +39,21 @@ class EscrowService
 
         DB::transaction(function () use ($mitra, $pesanan) {
             $wallet = $this->getOrCreateWalletWithLock($mitra);
+
+            // Idempotency check: Jangan menambah holding saldo jika pesanan ini sudah tercatat
+            $alreadyRecorded = WalletTransaction::where('wallet_id', $wallet->id)
+                ->where('pesanan_id', $pesanan->id)
+                ->where('type', 'inflow_holding')
+                ->lockForUpdate()
+                ->exists();
+
+            if ($alreadyRecorded) {
+                return;
+            }
+
             $amount = (float) $pesanan->pendapatan_mitra;
 
-            $wallet->saldo_pending = bcadd((string) $wallet->saldo_pending, (string) $amount, 2);
+            $wallet->saldo_pending = $this->addMoney($wallet->saldo_pending, $amount);
             $wallet->save();
 
             WalletTransaction::create([
@@ -71,9 +83,9 @@ class EscrowService
             $amount = (float) $pesanan->pendapatan_mitra;
 
             // Ensure saldo_pending is not negative
-            $newPending = bcsub((string) $wallet->saldo_pending, (string) $amount, 2);
+            $newPending = $this->subMoney($wallet->saldo_pending, $amount);
             $wallet->saldo_pending = max(0.00, (float) $newPending);
-            $wallet->saldo_available = bcadd((string) $wallet->saldo_available, (string) $amount, 2);
+            $wallet->saldo_available = $this->addMoney($wallet->saldo_available, $amount);
             $wallet->save();
 
             WalletTransaction::create([
@@ -141,7 +153,7 @@ class EscrowService
         return DB::transaction(function () use ($withdrawal, $reason) {
             $wallet = Wallet::where('id', $withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
 
-            $wallet->saldo_available = bcadd((string) $wallet->saldo_available, (string) $withdrawal->nominal, 2);
+            $wallet->saldo_available = $this->addMoney($wallet->saldo_available, $withdrawal->nominal);
             $wallet->save();
 
             $withdrawal->update([
@@ -168,9 +180,16 @@ class EscrowService
     public function settleWithdrawalSuccess(Withdrawal $withdrawal, ?string $disbursementId = null): Withdrawal
     {
         return DB::transaction(function () use ($withdrawal, $disbursementId) {
+            $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            // Idempotency: Jika sudah completed, tidak perlu mutasi ulang
+            if ($withdrawal->status === 'completed') {
+                return $withdrawal;
+            }
+
             $wallet = Wallet::where('id', $withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
 
-            $wallet->total_withdrawn = bcadd((string) $wallet->total_withdrawn, (string) $withdrawal->nominal, 2);
+            $wallet->total_withdrawn = $this->addMoney($wallet->total_withdrawn, $withdrawal->nominal);
             $wallet->save();
 
             $withdrawal->update([
@@ -181,6 +200,7 @@ class EscrowService
 
             WalletTransaction::create([
                 'wallet_id' => $wallet->id,
+                'withdrawal_id' => $withdrawal->id,
                 'type' => 'withdrawal_settled',
                 'nominal' => $withdrawal->nominal,
                 'saldo_pending_after' => $wallet->saldo_pending,
@@ -198,9 +218,16 @@ class EscrowService
     public function handleWithdrawalFailure(Withdrawal $withdrawal, string $failureReason): Withdrawal
     {
         return DB::transaction(function () use ($withdrawal, $failureReason) {
+            $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            // Idempotency: Jika sudah failed, jangan kembalikan saldo dua kali
+            if ($withdrawal->status === 'failed') {
+                return $withdrawal;
+            }
+
             $wallet = Wallet::where('id', $withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
 
-            $wallet->saldo_available = bcadd((string) $wallet->saldo_available, (string) $withdrawal->nominal, 2);
+            $wallet->saldo_available = $this->addMoney($wallet->saldo_available, $withdrawal->nominal);
             $wallet->save();
 
             $withdrawal->update([
@@ -210,6 +237,7 @@ class EscrowService
 
             WalletTransaction::create([
                 'wallet_id' => $wallet->id,
+                'withdrawal_id' => $withdrawal->id,
                 'type' => 'withdrawal_refunded',
                 'nominal' => $withdrawal->nominal,
                 'saldo_pending_after' => $wallet->saldo_pending,
@@ -219,5 +247,71 @@ class EscrowService
 
             return $withdrawal;
         });
+    }
+
+    /**
+     * Handle reversed disbursement from Xendit (money clawed back after completed).
+     */
+    public function handleWithdrawalReversal(Withdrawal $withdrawal, ?string $reason = null): Withdrawal
+    {
+        return DB::transaction(function () use ($withdrawal, $reason) {
+            $withdrawal = Withdrawal::where('id', $withdrawal->id)->lockForUpdate()->firstOrFail();
+
+            // Idempotency: Jika sudah reversed, return early
+            if ($withdrawal->status === 'reversed') {
+                return $withdrawal;
+            }
+
+            if ($withdrawal->status !== 'completed') {
+                throw new InvalidArgumentException('Hanya penarikan dana dengan status completed yang dapat dibatalkan (reversed).');
+            }
+
+            $wallet = Wallet::where('id', $withdrawal->wallet_id)->lockForUpdate()->firstOrFail();
+
+            // Kurangi total_withdrawn dan kembalikan dana ke saldo aktif mitra
+            $newWithdrawn = $this->subMoney($wallet->total_withdrawn, $withdrawal->nominal);
+            $wallet->total_withdrawn = max(0.00, (float) $newWithdrawn);
+            $wallet->saldo_available = $this->addMoney($wallet->saldo_available, $withdrawal->nominal);
+            $wallet->save();
+
+            $reversalNote = $reason ?? 'Dana transfer penarikan ditarik kembali oleh pihak bank / Xendit (REVERSED).';
+
+            $withdrawal->update([
+                'status' => 'reversed',
+                'failure_reason' => $reversalNote,
+            ]);
+
+            WalletTransaction::create([
+                'wallet_id' => $wallet->id,
+                'withdrawal_id' => $withdrawal->id,
+                'type' => 'disbursement_reversed',
+                'nominal' => $withdrawal->nominal,
+                'saldo_pending_after' => $wallet->saldo_pending,
+                'saldo_available_after' => $wallet->saldo_available,
+                'catatan' => 'Reversal penarikan dana #'.$withdrawal->id.': '.$reversalNote,
+            ]);
+
+            return $withdrawal;
+        });
+    }
+
+    /**
+     * Add monetary values safely with 2 decimal precision.
+     */
+    protected function addMoney(string|float|int $a, string|float|int $b): string
+    {
+        return function_exists('bcadd')
+            ? bcadd((string) $a, (string) $b, 2)
+            : number_format((float) $a + (float) $b, 2, '.', '');
+    }
+
+    /**
+     * Subtract monetary values safely with 2 decimal precision.
+     */
+    protected function subMoney(string|float|int $a, string|float|int $b): string
+    {
+        return function_exists('bcsub')
+            ? bcsub((string) $a, (string) $b, 2)
+            : number_format((float) $a - (float) $b, 2, '.', '');
     }
 }

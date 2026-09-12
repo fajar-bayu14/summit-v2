@@ -2,22 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\PaymentWebhookLog;
-use App\Models\Pesanan;
-use App\Services\PesananService;
+use App\Jobs\ProcessXenditPaymentWebhookJob;
+use App\Models\WebhookEvent;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use OpenApi\Attributes as OA;
 
 class XenditWebhookController extends Controller
 {
-    /**
-     * Inject the order service.
-     */
-    public function __construct(
-        protected PesananService $pesananService
-    ) {}
-
     #[OA\Post(
         path: '/api/v1/payments/webhook/xendit',
         summary: 'Handle Xendit invoice callback (PAID / EXPIRED)',
@@ -38,46 +31,47 @@ class XenditWebhookController extends Controller
         ),
         responses: [
             new OA\Response(response: 200, description: 'Webhook acknowledged'),
-            new OA\Response(response: 404, description: 'Invoice not found'),
+            new OA\Response(response: 401, description: 'Unauthorized: Invalid or missing token'),
         ]
     )]
     public function handle(Request $request): JsonResponse
     {
         $payload = $request->input();
-        $externalId = (string) ($payload['external_id'] ?? '');
+        $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
 
-        $pesanan = $externalId !== ''
-            ? Pesanan::where('invoice', $externalId)->with(['pembayaran', 'details.produk', 'details.produk.tiket'])->first()
-            : null;
+        $externalId = (string) ($payload['external_id'] ?? ($data['external_id'] ?? ($data['reference_id'] ?? '')));
+        $rawIdentifier = (string) ($payload['id'] ?? ($data['id'] ?? ''));
+        $status = (string) ($payload['status'] ?? ($data['status'] ?? ''));
+        $amount = (string) ($payload['paid_amount'] ?? ($payload['amount'] ?? ($data['paid_amount'] ?? ($data['amount'] ?? ''))));
+        $paymentId = (string) ($payload['payment_id'] ?? ($data['payment_id'] ?? ''));
 
-        $log = PaymentWebhookLog::create([
-            'pesanan_id' => $pesanan?->id,
-            'pembayaran_id' => $pesanan?->pembayaran?->id,
-            'provider' => 'xendit',
-            'event' => isset($payload['status']) ? 'invoice.'.strtolower($payload['status']) : null,
-            'external_id' => $externalId !== '' ? $externalId : null,
-            'status_raw' => $payload['status'] ?? null,
-            'payload' => $payload,
-            'ip_address' => $request->ip(),
-            'is_valid' => true,
-        ]);
+        $headerId = $request->header('webhook-id');
+        $eventId = (string) ($headerId ?: hash('sha256', "xendit:invoice:{$rawIdentifier}:{$status}:{$amount}:{$paymentId}"));
 
-        if (! $pesanan) {
+        $eventType = isset($payload['event'])
+            ? (string) $payload['event']
+            : ($status !== '' ? 'invoice.'.strtolower($status) : 'invoice.unknown');
+
+        try {
+            $event = WebhookEvent::create([
+                'provider' => 'xendit',
+                'event_id' => $eventId,
+                'event_type' => $eventType,
+                'resource_type' => 'order',
+                'resource_id' => $externalId !== '' ? $externalId : null,
+                'payload' => $payload,
+                'ip_address' => $request->ip(),
+                'verification_status' => 'verified',
+                'processing_status' => 'pending',
+            ]);
+        } catch (UniqueConstraintViolationException $e) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Invoice tidak ditemukan.',
-            ], 404);
+                'status' => 'success',
+                'message' => 'Event webhook duplikat telah diterima sebelumnya.',
+            ], 200);
         }
 
-        $status = strtoupper((string) ($payload['status'] ?? ''));
-
-        if ($status === 'PAID') {
-            $this->pesananService->markPaid($pesanan, $payload);
-        } elseif ($status === 'EXPIRED') {
-            $this->pesananService->markExpired($pesanan);
-        } else {
-            $log->update(['error_message' => "Status webhook tidak ditangani: {$status}."]);
-        }
+        ProcessXenditPaymentWebhookJob::dispatch($event->id);
 
         return response()->json([
             'status' => 'success',
