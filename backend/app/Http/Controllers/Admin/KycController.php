@@ -10,7 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class KycController extends Controller
 {
@@ -111,7 +111,7 @@ class KycController extends Controller
             new OA\Response(response: 404, description: 'KYC profile or document file not found'),
         ]
     )]
-    public function downloadDocument(int $id): BinaryFileResponse
+    public function downloadDocument(int $id): StreamedResponse
     {
         $pendaki = Pendaki::findOrFail($id);
 
@@ -119,7 +119,7 @@ class KycController extends Controller
             abort(404, 'File dokumen tidak ditemukan.');
         }
 
-        return Storage::disk('local')->download($pendaki->foto_identitas);
+        return Storage::disk('local')->response($pendaki->foto_identitas);
     }
 
     #[OA\Post(

@@ -16,6 +16,18 @@ class StoreCartItemRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('quantity') && ! $this->has('qty')) {
+            $this->merge([
+                'qty' => $this->input('quantity'),
+            ]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -25,6 +37,7 @@ class StoreCartItemRequest extends FormRequest
         return [
             'produk_id' => ['required', 'integer', 'exists:produks,id'],
             'qty' => ['required', 'integer', 'min:1'],
+            'quantity' => ['nullable', 'integer', 'min:1'],
             'jalur_id' => ['required', 'integer', 'exists:jalur_pendakians,id'],
             'tanggal_booking' => ['required', 'date', 'date_format:Y-m-d', 'after_or_equal:today'],
             'tanggal_selesai_booking' => ['nullable', 'date', 'date_format:Y-m-d', 'after_or_equal:tanggal_booking'],

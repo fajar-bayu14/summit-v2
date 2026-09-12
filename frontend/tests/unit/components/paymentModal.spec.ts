@@ -50,7 +50,7 @@ describe('PaymentModal Component (Task 5.4)', () => {
 
     expect(wrapper.text()).toContain('INV/20260706/ABC12')
     expect(wrapper.text()).toContain('Pembayaran Xendit Gateway')
-    expect(wrapper.text()).toContain('Bayar via Xendit')
+    expect(wrapper.text()).toContain('Bayar Sekarang')
   })
 
   it('should not render content when isOpen is false', () => {
@@ -92,5 +92,43 @@ describe('PaymentModal Component (Task 5.4)', () => {
 
     expect(checkoutApi.getOrderDetail).toHaveBeenCalledWith('INV/20260706/ABC12')
     expect(wrapper.emitted('payment-success')).toBeTruthy()
+  })
+
+  it('should render payment channel badges and provider in modal', () => {
+    const wrapper = mount(PaymentModal, {
+      props: {
+        isOpen: true,
+        order: mockOrder,
+      },
+    })
+
+    expect(wrapper.text()).toContain('Saluran Pembayaran Resmi:')
+    expect(wrapper.text()).toContain('QRIS (BCA, GoPay, OVO, ShopeePay)')
+    expect(wrapper.text()).toContain('Virtual Account Bank')
+    expect(wrapper.text()).toContain('Kartu Kredit / Debit')
+    expect(wrapper.text()).toContain('Xendit')
+  })
+
+  it('should handle expired countdown properly and disable action button', async () => {
+    const expiredOrder = {
+      ...mockOrder,
+      pembayaran: {
+        ...mockOrder.pembayaran!,
+        expired_at: new Date(Date.now() - 60000).toISOString(), // expired 1 minute ago
+      },
+    }
+
+    const wrapper = mount(PaymentModal, {
+      props: {
+        isOpen: true,
+        order: expiredOrder,
+      },
+    })
+
+    expect(wrapper.text()).toContain('Waktu Pembayaran Telah Berakhir')
+    expect(wrapper.text()).toContain('00:00')
+    const payBtn = wrapper.findAll('button').find(b => b.text().includes('Batas Waktu Pembayaran Habis'))
+    expect(payBtn).toBeDefined()
+    expect(payBtn?.attributes('disabled')).toBeDefined()
   })
 })

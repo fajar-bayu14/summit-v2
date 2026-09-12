@@ -33,6 +33,20 @@ export function normalizePaginatedResponse<T = any>(response: ApiResponse<Larave
     return { items, meta, links }
   }
 
+  // If payload already has normalized items array
+  if (payload && typeof payload === 'object' && Array.isArray((payload as any).items)) {
+    const items: T[] = (payload as any).items
+    const meta: PaginationMeta = (payload as any).meta || {
+      current_page: 1,
+      from: items.length > 0 ? 1 : null,
+      last_page: 1,
+      per_page: items.length || 15,
+      to: items.length,
+      total: items.length,
+    }
+    return { items, meta, links: (payload as any).links || {} }
+  }
+
   // If payload is already a raw array
   if (Array.isArray(payload)) {
     return {

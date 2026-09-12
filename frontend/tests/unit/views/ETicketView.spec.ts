@@ -112,5 +112,56 @@ describe('ETicketView Component (Task 6.3)', () => {
     expect(wrapper.text()).toContain('Fajar Bayu')
     expect(wrapper.text()).toContain('3301234567890001')
     expect(wrapper.find('img').attributes('src')).toContain('api.qrserver.com')
+
+    // Verify ID card print wrappers are rendered
+    const cardWrappers = wrapper.findAll('.print-id-card-wrapper')
+    expect(cardWrappers.length).toBe(1)
+  })
+
+  it('should render an ID card for each group member in manifest', async () => {
+    const mockMultiOrder = {
+      id: 2,
+      invoice: 'INV/20260710/XYZ99',
+      user_id: 10,
+      basecamp_id: 2,
+      jalur_id: 3,
+      status: 'paid' as const,
+      subtotal: 150000,
+      tanggal_booking: '2026-07-15',
+      total_bayar: 152500,
+      basecamp: {
+        id: 2,
+        nama_basecamp: 'Basecamp Bambangan',
+        jam_operasional: '24 Jam',
+      } as any,
+      jalur: {
+        id: 3,
+        nama_jalur: 'Jalur Bambangan Gn. Slamet',
+      } as any,
+      anggotas: [
+        { id: 1, pesanan_id: 2, nama_anggota: 'Pendaki Satu', nik_identitas: '3301111111110001' },
+        { id: 2, pesanan_id: 2, nama_anggota: 'Pendaki Dua', nik_identitas: '3302222222220002' },
+      ],
+      details: [],
+    }
+
+    vi.mocked(pendakiOrdersApi.getOrderByInvoice).mockResolvedValueOnce({
+      status: 'success',
+      data: mockMultiOrder,
+    })
+
+    const wrapper = mount(ETicketView, {
+      global: {
+        stubs: { 'router-link': { template: '<a><slot /></a>' } },
+      },
+    })
+    await flushPromises()
+
+    const cardWrappers = wrapper.findAll('.print-id-card-wrapper')
+    expect(cardWrappers.length).toBe(2)
+    expect(wrapper.text()).toContain('Pendaki Satu')
+    expect(wrapper.text()).toContain('Pendaki Dua')
+    expect(wrapper.text()).toContain('3301111111110001')
+    expect(wrapper.text()).toContain('3302222222220002')
   })
 })

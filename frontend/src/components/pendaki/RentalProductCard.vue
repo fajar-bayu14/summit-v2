@@ -7,6 +7,8 @@ import {
   ShoppingCart,
   Eye,
   Package,
+  Check,
+  Loader2,
 } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -23,6 +25,8 @@ const emit = defineEmits<{
 }>()
 
 const quantity = ref(1)
+const isAdding = ref(false)
+const isSuccess = ref(false)
 
 const maxStock = computed(() => props.product.stok || 99)
 const isOutOfStock = computed(() => (props.product.stok ?? 1) <= 0)
@@ -40,8 +44,17 @@ function decrement() {
 }
 
 function handleAddToCart() {
-  if (isOutOfStock.value) return
+  if (isOutOfStock.value || isAdding.value) return
+  isAdding.value = true
   emit('add-to-cart', props.product, quantity.value)
+  isSuccess.value = true
+  setTimeout(() => {
+    isSuccess.value = false
+    quantity.value = 1
+  }, 1200)
+  setTimeout(() => {
+    isAdding.value = false
+  }, 500)
 }
 </script>
 
@@ -155,12 +168,15 @@ function handleAddToCart() {
         <!-- Add To Cart Button -->
         <Button
           size="sm"
-          class="w-full rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs gap-1.5 shadow-xs"
-          :disabled="isOutOfStock"
+          class="w-full rounded-xl font-semibold text-xs gap-1.5 shadow-xs transition-all duration-200"
+          :class="isSuccess ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : 'bg-emerald-700 hover:bg-emerald-800 text-white'"
+          :disabled="isOutOfStock || isAdding"
           @click="handleAddToCart"
         >
-          <ShoppingCart class="w-3.5 h-3.5" />
-          <span>+ Keranjang</span>
+          <Check v-if="isSuccess" class="w-3.5 h-3.5 text-white" />
+          <Loader2 v-else-if="isAdding" class="w-3.5 h-3.5 animate-spin" />
+          <ShoppingCart v-else class="w-3.5 h-3.5" />
+          <span>{{ isSuccess ? 'Ditambahkan!' : isAdding ? 'Menyimpan...' : '+ Keranjang' }}</span>
         </Button>
       </div>
     </div>

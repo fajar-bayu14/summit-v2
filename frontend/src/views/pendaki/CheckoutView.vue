@@ -46,7 +46,7 @@ const checkoutUrl = ref<string | null>(null)
 const userProfile = computed(() => {
   return {
     name: authStore.user?.name || '',
-    nik: authStore.pendakiProfile?.nik || '',
+    nik: authStore.pendakiProfile?.nomor_identitas || (authStore.pendakiProfile as any)?.nik || '',
     telepon: authStore.user?.telepon || '',
     telepon_darurat: authStore.pendakiProfile?.telepon_darurat || '',
     hubungan_darurat: authStore.pendakiProfile?.hubungan_darurat || '',
@@ -64,6 +64,17 @@ const isFormReady = computed(() => {
     sopAgreed.value &&
     !isSubmitting.value
   )
+})
+
+const formValidationHints = computed(() => {
+  const hints: string[] = []
+  if (!isManifestValid.value) {
+    hints.push('Lengkapi nama & 16-digit NIK semua anggota manifes.')
+  }
+  if (!sopAgreed.value) {
+    hints.push('Centang kotak persetujuan SOP Pendakian.')
+  }
+  return hints
 })
 
 async function handleCheckout() {
@@ -94,8 +105,8 @@ async function handleCheckout() {
 
 function handlePaymentSuccess(order: Pesanan) {
   router.push({
-    name: 'pendaki.profile',
-    query: { tab: 'orders', invoice: order.invoice },
+    path: '/pendaki/orders',
+    query: { invoice: order.invoice, success: 'true' },
   })
 }
 
@@ -284,11 +295,20 @@ onMounted(async () => {
           </Button>
 
           <!-- Form validation hints if disabled -->
-          <div v-if="!isFormReady" class="text-[11px] text-amber-700 space-y-1 bg-amber-50/60 p-2.5 rounded-xl border border-amber-200/60">
-            <span class="font-bold block">Perhatian:</span>
-            <ul class="list-disc list-inside space-y-0.5">
-              <li v-if="!isManifestValid">Lengkapi nama &amp; 16-digit NIK semua anggota manifes.</li>
-              <li v-if="!sopAgreed">Centang kotak persetujuan SOP Pendakian.</li>
+          <div
+            v-if="!isSubmitting && formValidationHints.length > 0"
+            role="status"
+            aria-live="polite"
+            class="text-[11px] text-amber-800 dark:text-amber-300 space-y-1.5 bg-amber-50/80 dark:bg-amber-950/40 p-3 rounded-xl border border-amber-200 dark:border-amber-900/60 shadow-xs"
+          >
+            <div class="flex items-center gap-1.5 font-bold text-amber-900 dark:text-amber-200">
+              <AlertCircle class="w-3.5 h-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>Perhatian:</span>
+            </div>
+            <ul class="list-disc list-inside space-y-1 pl-0.5 text-amber-800/90 dark:text-amber-300/90">
+              <li v-for="hint in formValidationHints" :key="hint">
+                {{ hint }}
+              </li>
             </ul>
           </div>
 

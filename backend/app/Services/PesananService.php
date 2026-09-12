@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Cart;
 use App\Models\KuotaHarianTiket;
+use App\Models\Pembayaran;
 use App\Models\Pesanan;
 use App\Models\Produk;
 use App\Models\User;
@@ -11,6 +12,7 @@ use Carbon\Carbon;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -109,20 +111,34 @@ class PesananService
      */
     public function markPaid(Pesanan $pesanan, array $payload): bool
     {
-        if ($pesanan->status === 'paid') {
-            return false;
-        }
+        return DB::transaction(function () use ($pesanan, $payload) {
+            $pesanan = Pesanan::where('id', $pesanan->id)
+                ->with(['details.produk.tiket', 'basecamp.mitra'])
+                ->lockForUpdate()
+                ->first();
 
-        if ($pesanan->status !== 'pending') {
-            return false;
-        }
+            if (! $pesanan) {
+                return false;
+            }
 
-        $pembayaran = $pesanan->pembayaran;
+            // Idempotency: jika sudah paid, return true
+            if ($pesanan->status === 'paid') {
+                return true;
+            }
 
-        DB::transaction(function () use ($pesanan, $pembayaran, $payload) {
+            $pembayaran = $pesanan->pembayaran()->lockForUpdate()->first();
+
+            if ($pesanan->status === 'expired') {
+                return $this->handleLatePayment($pesanan, $pembayaran, $payload);
+            }
+
+            if ($pesanan->status !== 'pending') {
+                return false;
+            }
+
             $pesanan->update(['status' => 'paid']);
 
-            $pembayaran->update([
+            $pembayaran?->update([
                 'metode' => $this->mapPaymentMethod($payload['payment_method'] ?? null),
                 'provider' => $payload['payment_channel'] ?? 'Xendit',
                 'reference_id' => $payload['id'] ?? $pembayaran->reference_id,
@@ -132,8 +148,100 @@ class PesananService
                 'paid_at' => now(),
             ]);
 
+            $pesanan->details()->update(['status_operasional' => 'ready']);
+
             app(EscrowService::class)->recordPaymentHolding($pesanan);
+
+            return true;
         });
+    }
+
+    /**
+     * Handle payment received after the order has already been marked expired.
+     */
+    protected function handleLatePayment(Pesanan $pesanan, ?Pembayaran $pembayaran, array $payload): bool
+    {
+        $canReopen = true;
+
+        foreach ($pesanan->details as $detail) {
+            $produk = $detail->produk;
+            if (! $produk) {
+                continue;
+            }
+
+            if ($produk->kategori === 'ticket') {
+                $produkTiket = $produk->tiket;
+                if ($produkTiket) {
+                    $kuota = KuotaHarianTiket::where('produk_tiket_id', $produkTiket->id)
+                        ->where('tanggal', $pesanan->tanggal_booking->toDateString())
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $kuota || $kuota->kuota_tersisa < $detail->qty) {
+                        $canReopen = false;
+                        break;
+                    }
+                }
+            } elseif ($produk->stok !== null) {
+                $produkLocked = Produk::where('id', $produk->id)->lockForUpdate()->first();
+                if (! $produkLocked || $produkLocked->stok < $detail->qty) {
+                    $canReopen = false;
+                    break;
+                }
+            }
+        }
+
+        if ($canReopen) {
+            // Re-deduct quota and stock
+            foreach ($pesanan->details as $detail) {
+                $produk = $detail->produk;
+                if (! $produk) {
+                    continue;
+                }
+
+                if ($produk->kategori === 'ticket') {
+                    $produkTiket = $produk->tiket;
+                    if ($produkTiket) {
+                        KuotaHarianTiket::where('produk_tiket_id', $produkTiket->id)
+                            ->where('tanggal', $pesanan->tanggal_booking->toDateString())
+                            ->decrement('kuota_tersisa', $detail->qty);
+                    }
+                } elseif ($produk->stok !== null) {
+                    Produk::where('id', $produk->id)->decrement('stok', $detail->qty);
+                }
+            }
+
+            $pesanan->update(['status' => 'paid']);
+            $pembayaran?->update([
+                'metode' => $this->mapPaymentMethod($payload['payment_method'] ?? null),
+                'provider' => $payload['payment_channel'] ?? 'Xendit',
+                'reference_id' => $payload['id'] ?? $pembayaran->reference_id,
+                'paid_amount' => $payload['paid_amount'] ?? $pembayaran->amount,
+                'status' => 'success',
+                'raw_response' => $payload,
+                'paid_at' => now(),
+            ]);
+
+            $pesanan->details()->update(['status_operasional' => 'ready']);
+            app(EscrowService::class)->recordPaymentHolding($pesanan);
+
+            Log::info("Late payment recovered: booking {$pesanan->invoice} reopened successfully.");
+
+            return true;
+        }
+
+        // Quota sold out: Record payment as success in platform suspense, keep order expired for refund resolution
+        $pembayaran?->update([
+            'metode' => $this->mapPaymentMethod($payload['payment_method'] ?? null),
+            'provider' => $payload['payment_channel'] ?? 'Xendit',
+            'reference_id' => $payload['id'] ?? $pembayaran->reference_id,
+            'paid_amount' => $payload['paid_amount'] ?? $pembayaran->amount,
+            'status' => 'success',
+            'raw_response' => $payload,
+            'paid_at' => now(),
+        ]);
+
+        Log::warning("Late payment received for expired order {$pesanan->invoice}, but quota/stock is exhausted. Order retained as expired, routed to refund/reconciliation.");
 
         return true;
     }
@@ -143,20 +251,25 @@ class PesananService
      */
     public function markExpired(Pesanan $pesanan): bool
     {
-        if ($pesanan->status !== 'pending') {
-            return false;
-        }
+        return DB::transaction(function () use ($pesanan) {
+            $pesanan = Pesanan::where('id', $pesanan->id)
+                ->with(['details.produk', 'details.produk.tiket'])
+                ->lockForUpdate()
+                ->first();
 
-        $pembayaran = $pesanan->pembayaran;
+            if (! $pesanan || $pesanan->status !== 'pending') {
+                return false;
+            }
 
-        DB::transaction(function () use ($pesanan, $pembayaran) {
+            $pembayaran = $pesanan->pembayaran()->lockForUpdate()->first();
+
             $pesanan->update(['status' => 'expired']);
-            $pembayaran->update(['status' => 'expired']);
+            $pembayaran?->update(['status' => 'expired']);
 
             $this->restoreStock($pesanan);
-        });
 
-        return true;
+            return true;
+        });
     }
 
     /**
@@ -164,20 +277,25 @@ class PesananService
      */
     public function cancel(Pesanan $pesanan): bool
     {
-        if ($pesanan->status !== 'pending') {
-            return false;
-        }
+        return DB::transaction(function () use ($pesanan) {
+            $pesanan = Pesanan::where('id', $pesanan->id)
+                ->with(['details.produk', 'details.produk.tiket'])
+                ->lockForUpdate()
+                ->first();
 
-        $pembayaran = $pesanan->pembayaran;
+            if (! $pesanan || $pesanan->status !== 'pending') {
+                return false;
+            }
 
-        DB::transaction(function () use ($pesanan, $pembayaran) {
+            $pembayaran = $pesanan->pembayaran()->lockForUpdate()->first();
+
             $pesanan->update(['status' => 'cancelled']);
-            $pembayaran->update(['status' => 'cancelled']);
+            $pembayaran?->update(['status' => 'cancelled']);
 
             $this->restoreStock($pesanan);
-        });
 
-        return true;
+            return true;
+        });
     }
 
     /**
@@ -187,15 +305,39 @@ class PesananService
     {
         $expired = 0;
 
-        $pendingPesanan = Pesanan::where('status', 'pending')
-            ->with(['pembayaran', 'details.produk', 'details.produk.tiket'])
-            ->get();
+        $candidateIds = Pesanan::where('status', 'pending')
+            ->whereHas('pembayaran', function ($query) {
+                $query->where('expired_at', '<', now());
+            })
+            ->limit(100)
+            ->pluck('id');
 
-        foreach ($pendingPesanan as $pesanan) {
-            $pembayaran = $pesanan->pembayaran;
-            $expiredAt = $pembayaran?->expired_at;
+        foreach ($candidateIds as $id) {
+            $success = DB::transaction(function () use ($id) {
+                $pesanan = Pesanan::where('id', $id)
+                    ->with(['details.produk', 'details.produk.tiket'])
+                    ->lockForUpdate()
+                    ->first();
 
-            if ($expiredAt && $expiredAt->isPast() && $this->markExpired($pesanan)) {
+                if (! $pesanan || $pesanan->status !== 'pending') {
+                    return false;
+                }
+
+                $pembayaran = $pesanan->pembayaran()->lockForUpdate()->first();
+
+                if (! $pembayaran || ! $pembayaran->expired_at?->isPast()) {
+                    return false;
+                }
+
+                $pesanan->update(['status' => 'expired']);
+                $pembayaran->update(['status' => 'expired']);
+
+                $this->restoreStock($pesanan);
+
+                return true;
+            });
+
+            if ($success) {
                 $expired++;
             }
         }

@@ -17,6 +17,8 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'role', type: 'string', example: 'pendaki'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', example: '2026-07-02T15:34:17+07:00'),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', example: '2026-07-02T15:34:17+07:00'),
+        new OA\Property(property: 'pendaki', ref: '#/components/schemas/PendakiResource', nullable: true),
+        new OA\Property(property: 'mitra', ref: '#/components/schemas/MitraResource', nullable: true),
     ]
 )]
 class UserResource extends JsonResource
@@ -35,6 +37,12 @@ class UserResource extends JsonResource
             'role' => $this->role,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
+            'pendaki' => $this->when($this->role === 'pendaki' && $this->relationLoaded('pendaki'), function () {
+                return $this->pendaki ? new PendakiResource($this->pendaki) : null;
+            }),
+            'mitra' => $this->when($this->role === 'mitra' && $this->relationLoaded('mitra'), function () {
+                return $this->mitra ? new MitraResource($this->mitra) : null;
+            }),
         ];
     }
 }

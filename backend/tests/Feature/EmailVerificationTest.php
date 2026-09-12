@@ -1,6 +1,7 @@
 <?php
 
 use App\Mail\SendOtpMail;
+use App\Models\Pendaki;
 use App\Models\User;
 use App\Models\UserOtp;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -220,6 +221,40 @@ test('user can login successfully and receive auth_token cookie', function () {
     ]);
     $response->assertJsonStructure(['token']);
     $response->assertCookie('auth_token');
+});
+
+test('pendaki user login includes loaded pendaki profile with kyc status', function () {
+    $user = User::factory()->create([
+        'email' => 'pendaki@example.com',
+        'password' => Hash::make('password'),
+        'email_verified_at' => now(),
+        'role' => 'pendaki',
+    ]);
+
+    Pendaki::create([
+        'user_id' => $user->id,
+        'nama_lengkap' => $user->name,
+        'jenis_identitas' => 'ktp',
+        'nomor_identitas' => '1234567890123456',
+        'foto_identitas' => 'kyc_documents/test.jpg',
+        'tanggal_lahir' => '1995-05-15',
+        'jenis_kelamin' => 'l',
+        'alamat' => 'Jl. Pendaki',
+        'telepon' => '081234567890',
+        'nama_kontak_darurat' => 'Darurat',
+        'telepon_darurat' => '081298765432',
+        'hubungan_darurat' => 'Teman',
+        'status_verifikasi' => 'disetujui',
+    ]);
+
+    $response = $this->postJson(route('login'), [
+        'email' => 'pendaki@example.com',
+        'password' => 'password',
+    ]);
+
+    $response->assertSuccessful();
+    $response->assertJsonPath('data.pendaki.status_verifikasi', 'disetujui');
+    $response->assertJsonPath('data.pendaki.nomor_identitas', '1234567890123456');
 });
 
 test('user can logout successfully and clear auth_token cookie', function () {

@@ -19,6 +19,30 @@
     --color-pine-600: #059669;
     --color-pine-500: #10B981;
 
+    --color-forest-950: #052e16;
+    --color-forest-900: #064e3b;
+    --color-forest-800: #065f46;
+    --color-forest-700: #047857;
+    --color-forest-600: #1e3a2b;
+    --color-forest-500: #10b981;
+    --color-forest-400: #34d399;
+    --color-forest-300: #6ee7b7;
+    --color-forest-200: #a7f3d0;
+    --color-forest-100: #d1fae5;
+    --color-forest-50: #ecfdf5;
+
+    --color-safety-950: #431407;
+    --color-safety-900: #7c2d12;
+    --color-safety-800: #9a3412;
+    --color-safety-700: #c2410c;
+    --color-safety-600: #e65100;
+    --color-safety-500: #f97316;
+    --color-safety-400: #fb923c;
+    --color-safety-300: #fdba74;
+    --color-safety-200: #fed7aa;
+    --color-safety-100: #ffedd5;
+    --color-safety-50: #fff7ed;
+
     --color-primary-container: #10b981;
     --color-on-primary-container: #00422b;
     --color-primary-fixed: #6ffbbe;

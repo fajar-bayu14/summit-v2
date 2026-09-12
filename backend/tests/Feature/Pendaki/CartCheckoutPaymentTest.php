@@ -101,6 +101,7 @@ function mockXenditInvoice(?string $externalId = null, ?string $status = 'PENDIN
 
     $api = Mockery::mock(InvoiceApi::class);
     $api->shouldReceive('setApiKey')->andReturnSelf();
+    $api->shouldReceive('getInvoiceById')->byDefault()->andReturn($invoice);
     $api->shouldReceive('createInvoice')
         ->withArgs(function ($request) {
             expect($request)->toBeInstanceOf(CreateInvoiceRequest::class)
@@ -258,6 +259,13 @@ test('climber can update and remove a cart item, and clear the cart', function (
 
     $this->assertDatabaseHas('cart_items', ['id' => $itemId, 'qty' => 4]);
 
+    // Also support 'quantity' field sent by mobile/external clients
+    $this->actingAs($this->user)->patchJson(route('cart.update-item', ['itemId' => $itemId]), [
+        'quantity' => 3,
+    ])->assertStatus(200);
+
+    $this->assertDatabaseHas('cart_items', ['id' => $itemId, 'qty' => 3]);
+
     $this->actingAs($this->user)->deleteJson(route('cart.destroy-item', ['itemId' => $itemId]))
         ->assertStatus(200);
 
@@ -349,7 +357,10 @@ test('webhook marks the order as paid and is idempotent', function () {
         'payment_method' => 'QR_CODE',
     ];
 
-    $this->postJson(route('xendit.webhook'), $payload)
+    $token = config('services.xendit.callback_token');
+
+    $this->withHeader('x-callback-token', $token)
+        ->postJson(route('xendit.webhook'), $payload)
         ->assertStatus(200)->assertJsonPath('status', 'success');
 
     $this->assertDatabaseHas('pesanans', ['id' => $pesanan->id, 'status' => 'paid']);
@@ -361,7 +372,8 @@ test('webhook marks the order as paid and is idempotent', function () {
     ]);
 
     // Idempotent: a second PAID callback leaves the state unchanged
-    $this->postJson(route('xendit.webhook'), $payload)
+    $this->withHeader('x-callback-token', $token)
+        ->postJson(route('xendit.webhook'), $payload)
         ->assertStatus(200);
 
     $this->assertSame(1, Pembayaran::where('pesanan_id', $pesanan->id)->count());
@@ -371,23 +383,40 @@ test('webhook marks the order as paid and is idempotent', function () {
         'event' => 'invoice.paid',
         'is_valid' => true,
     ]);
+
+    $this->assertDatabaseHas('webhook_events', [
+        'resource_id' => $pesanan->invoice,
+        'processing_status' => 'processed',
+    ]);
 });
 
-test('webhook for an unknown invoice returns 404', function () {
-    $this->postJson(route('xendit.webhook'), [
-        'external_id' => 'INV/UNKNOWN/001',
-        'status' => 'PAID',
-    ])->assertStatus(404);
+test('webhook for an unknown invoice returns 200 acknowledged with ignored status to prevent retry storms', function () {
+    $token = config('services.xendit.callback_token');
+
+    $this->withHeader('x-callback-token', $token)
+        ->postJson(route('xendit.webhook'), [
+            'id' => 'inv_unknown_999',
+            'external_id' => 'INV/UNKNOWN/001',
+            'status' => 'PAID',
+        ])->assertStatus(200);
+
+    $this->assertDatabaseHas('webhook_events', [
+        'resource_id' => 'INV/UNKNOWN/001',
+        'processing_status' => 'ignored',
+    ]);
 });
 
 test('webhook EXPIRED marks the order as expired and restores stock', function () {
     $this->produkRental->decrement('stok', 1);
     $pesanan = createPendingPesanan();
+    $token = config('services.xendit.callback_token');
 
-    $this->postJson(route('xendit.webhook'), [
-        'external_id' => $pesanan->invoice,
-        'status' => 'EXPIRED',
-    ])->assertStatus(200);
+    $this->withHeader('x-callback-token', $token)
+        ->postJson(route('xendit.webhook'), [
+            'id' => 'inv_exp_123',
+            'external_id' => $pesanan->invoice,
+            'status' => 'EXPIRED',
+        ])->assertStatus(200);
 
     $this->assertDatabaseHas('pesanans', ['id' => $pesanan->id, 'status' => 'expired']);
     $this->assertDatabaseHas('pembayarans', ['pesanan_id' => $pesanan->id, 'status' => 'expired']);
@@ -464,4 +493,89 @@ test('orders:expire-pending command expires stale orders and restores stock', fu
 
     $this->produkRental->refresh();
     expect($this->produkRental->stok)->toBe(10);
+});
+
+test('webhook handles Webhook v2 nested payload format and marks order as paid', function () {
+    $pesanan = createPendingPesanan();
+
+    $payload = [
+        'event' => 'invoice.paid',
+        'business_id' => 'biz_123',
+        'data' => [
+            'id' => 'inv_v2_12345',
+            'external_id' => $pesanan->invoice,
+            'status' => 'PAID',
+            'amount' => 40000,
+            'paid_amount' => 40000,
+            'payment_channel' => 'QRIS',
+            'payment_method' => 'QR_CODE',
+        ],
+    ];
+
+    $token = config('services.xendit.callback_token');
+
+    $this->withHeader('x-callback-token', $token)
+        ->postJson(route('xendit.webhook'), $payload)
+        ->assertStatus(200)
+        ->assertJsonPath('status', 'success');
+
+    $this->assertDatabaseHas('pesanans', ['id' => $pesanan->id, 'status' => 'paid']);
+    $this->assertDatabaseHas('pembayarans', [
+        'pesanan_id' => $pesanan->id,
+        'status' => 'success',
+        'reference_id' => 'inv_v2_12345',
+    ]);
+});
+
+test('show order actively syncs payment status with Xendit if order is pending', function () {
+    $pesanan = createPendingPesanan();
+    $pesanan->pembayaran->update(['reference_id' => 'inv_paid_sync_123']);
+
+    $paidInvoice = new Invoice([
+        'id' => 'inv_paid_sync_123',
+        'external_id' => $pesanan->invoice,
+        'status' => 'PAID',
+        'amount' => 40000,
+        'payment_method' => 'QR_CODE',
+        'payment_channel' => 'QRIS',
+    ]);
+
+    $api = Mockery::mock(InvoiceApi::class);
+    $api->shouldReceive('setApiKey')->andReturnSelf();
+    $api->shouldReceive('getInvoiceById')->with('inv_paid_sync_123')->andReturn($paidInvoice);
+    app()->instance(InvoiceApi::class, $api);
+
+    $this->actingAs($this->user)
+        ->getJson(route('pesanan.show', ['invoice' => $pesanan->invoice]))
+        ->assertStatus(200)
+        ->assertJsonPath('data.status', 'paid');
+
+    $this->assertDatabaseHas('pesanans', ['id' => $pesanan->id, 'status' => 'paid']);
+});
+
+test('check-status endpoint actively syncs payment status with Xendit', function () {
+    $pesanan = createPendingPesanan();
+    $pesanan->pembayaran->update(['reference_id' => 'inv_check_status_456']);
+
+    $paidInvoice = new Invoice([
+        'id' => 'inv_check_status_456',
+        'external_id' => $pesanan->invoice,
+        'status' => 'PAID',
+        'amount' => 40000,
+        'payment_method' => 'QR_CODE',
+        'payment_channel' => 'QRIS',
+    ]);
+
+    $api = Mockery::mock(InvoiceApi::class);
+    $api->shouldReceive('setApiKey')->andReturnSelf();
+    $api->shouldReceive('getInvoiceById')->with('inv_check_status_456')->andReturn($paidInvoice);
+    app()->instance(InvoiceApi::class, $api);
+
+    $this->actingAs($this->user)
+        ->postJson(route('pesanan.check-status', ['invoice' => $pesanan->invoice]))
+        ->assertStatus(200)
+        ->assertJsonPath('status', 'success')
+        ->assertJsonPath('data.status', 'paid');
+
+    $this->assertDatabaseHas('pesanans', ['id' => $pesanan->id, 'status' => 'paid']);
 });

@@ -15,7 +15,7 @@ test('pendaki can submit KYC profile and upload identity document', function () 
     $user = User::factory()->create(['role' => 'pendaki']);
     $user->markEmailAsVerified();
 
-    $file = UploadedFile::fake()->image('ktp.jpg', 600, 400);
+    $file = UploadedFile::fake()->create('ktp.jpg', 100, 'image/jpeg');
 
     $response = $this->actingAs($user)
         ->postJson(route('kyc.submit'), [
@@ -197,4 +197,68 @@ test('middleware kyc.verified blocks transactions if user is not verified', func
         'status' => 'success',
         'message' => 'Transaction allowed',
     ]);
+});
+
+test('admin can preview climber KYC identity document securely', function () {
+    Storage::fake('local');
+
+    $admin = User::factory()->create(['role' => 'admin']);
+    $user = User::factory()->create(['role' => 'pendaki']);
+
+    $file = UploadedFile::fake()->create('ktp.jpg', 100, 'image/jpeg');
+    $path = $file->store('kyc_documents', 'local');
+
+    $pendaki = Pendaki::create([
+        'user_id' => $user->id,
+        'nama_lengkap' => $user->name,
+        'jenis_identitas' => 'ktp',
+        'nomor_identitas' => '9999999999999999',
+        'foto_identitas' => $path,
+        'tanggal_lahir' => '1990-01-01',
+        'jenis_kelamin' => 'p',
+        'alamat' => 'Alamat Pendaki',
+        'telepon' => '081234567890',
+        'nama_kontak_darurat' => 'Kontak',
+        'telepon_darurat' => '081234567891',
+        'hubungan_darurat' => 'Orang Tua',
+        'status_verifikasi' => 'pending',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('admin.kyc.download', ['id' => $pendaki->id]));
+    $response->assertStatus(200);
+    $response->assertHeader('content-disposition', 'inline; filename='.basename($path));
+});
+
+test('downloadDocument returns 404 when KYC identity document file does not exist', function () {
+    Storage::fake('local');
+
+    $admin = User::factory()->create(['role' => 'admin']);
+    $user = User::factory()->create(['role' => 'pendaki']);
+
+    $pendaki = Pendaki::create([
+        'user_id' => $user->id,
+        'nama_lengkap' => $user->name,
+        'jenis_identitas' => 'ktp',
+        'nomor_identitas' => '9999999999999999',
+        'foto_identitas' => 'kyc_documents/nonexistent.jpg',
+        'tanggal_lahir' => '1990-01-01',
+        'jenis_kelamin' => 'p',
+        'alamat' => 'Alamat Pendaki',
+        'telepon' => '081234567890',
+        'nama_kontak_darurat' => 'Kontak',
+        'telepon_darurat' => '081234567891',
+        'hubungan_darurat' => 'Orang Tua',
+        'status_verifikasi' => 'pending',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('admin.kyc.download', ['id' => $pendaki->id]));
+    $response->assertStatus(404);
+});
+
+test('non-admin cannot download KYC identity document', function () {
+    $user = User::factory()->create(['role' => 'pendaki']);
+    $user->markEmailAsVerified();
+
+    $response = $this->actingAs($user)->get(route('admin.kyc.download', ['id' => 1]));
+    $response->assertStatus(403);
 });

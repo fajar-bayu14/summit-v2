@@ -21,9 +21,9 @@ const kycInfo = computed(() => formatKycStatus(props.status))
 
 const iconComponent = computed(() => {
   const norm = (props.status || '').toLowerCase()
-  if (norm === 'verified') return ShieldCheck
+  if (norm === 'verified' || norm === 'disetujui') return ShieldCheck
   if (norm === 'pending') return Clock
-  if (norm === 'rejected') return ShieldAlert
+  if (norm === 'rejected' || norm === 'ditolak') return ShieldAlert
   return Shield
 })
 </script>

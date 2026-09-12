@@ -54,14 +54,31 @@ function updateCountdown() {
   }
 
   const expiryTime = new Date(currentOrder.value.pembayaran.expired_at).getTime()
-  const now = new Date().getTime()
+  if (isNaN(expiryTime)) {
+    if (remainingSeconds.value > 0) remainingSeconds.value--
+    return
+  }
+
+  const now = Date.now()
   const diff = Math.max(0, Math.floor((expiryTime - now) / 1000))
   remainingSeconds.value = diff
+
+  if (diff <= 0) {
+    stopPolling()
+  }
 }
 
+const isExpired = computed(() => remainingSeconds.value <= 0 && !isSuccess.value)
+
 const formattedCountdown = computed(() => {
-  const mins = Math.floor(remainingSeconds.value / 60)
+  if (remainingSeconds.value <= 0) return '00:00'
+  const hours = Math.floor(remainingSeconds.value / 3600)
+  const mins = Math.floor((remainingSeconds.value % 3600) / 60)
   const secs = remainingSeconds.value % 60
+
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 })
 
@@ -126,7 +143,7 @@ function copyInvoice() {
 }
 
 function openPaymentGateway() {
-  if (effectiveCheckoutUrl.value) {
+  if (effectiveCheckoutUrl.value && !isExpired.value) {
     window.open(effectiveCheckoutUrl.value, '_blank', 'noopener,noreferrer')
   }
 }
@@ -150,28 +167,22 @@ function stopPolling() {
 }
 
 watch(
-  () => props.order,
-  newVal => {
-    currentOrder.value = newVal
-    if (newVal) {
+  () => [props.isOpen, props.order] as const,
+  ([open, order]) => {
+    currentOrder.value = order
+    if (order) {
       if (
-        newVal.status === 'paid' ||
-        newVal.status === 'confirmed' ||
-        newVal.pembayaran?.status === 'paid'
+        order.status === 'paid' ||
+        order.status === 'confirmed' ||
+        order.pembayaran?.status === 'paid'
       ) {
         isSuccess.value = true
       } else {
         isSuccess.value = false
       }
     }
-  },
-  { immediate: true }
-)
 
-watch(
-  () => props.isOpen,
-  open => {
-    if (open && currentOrder.value && !isSuccess.value) {
+    if (open && order && !isSuccess.value) {
       startPolling()
     } else {
       stopPolling()
@@ -257,12 +268,24 @@ onUnmounted(() => {
         <!-- Pending state content -->
         <template v-else>
           <!-- Countdown bar -->
-          <div class="p-4 rounded-xl bg-amber-50/80 border border-amber-200 flex items-center justify-between">
-            <div class="flex items-center gap-2 text-amber-800">
-              <Clock class="w-4 h-4 shrink-0 animate-pulse" />
-              <span class="text-xs font-semibold">Sisa Waktu Pembayaran</span>
+          <div
+            class="p-4 rounded-xl border flex items-center justify-between transition-colors"
+            :class="
+              isExpired
+                ? 'bg-red-50 border-red-200 text-red-800'
+                : 'bg-amber-50/80 border-amber-200 text-amber-800'
+            "
+          >
+            <div class="flex items-center gap-2">
+              <Clock class="w-4 h-4 shrink-0" :class="{ 'animate-pulse': !isExpired }" />
+              <span class="text-xs font-semibold">
+                {{ isExpired ? 'Waktu Pembayaran Telah Berakhir' : 'Sisa Waktu Pembayaran' }}
+              </span>
             </div>
-            <div class="font-mono font-bold text-amber-900 text-base">
+            <div
+              class="font-mono font-bold text-base"
+              :class="isExpired ? 'text-red-700' : 'text-amber-900'"
+            >
               {{ formattedCountdown }}
             </div>
           </div>
@@ -294,6 +317,13 @@ onUnmounted(() => {
               </span>
             </div>
 
+            <div class="flex items-center justify-between pt-2 border-t border-gray-200/60">
+              <span class="text-xs font-medium text-gray-500">Metode Pembayaran</span>
+              <span class="text-xs font-semibold text-gray-900 capitalize">
+                {{ currentOrder?.pembayaran?.provider || 'Xendit Multi-Channel' }}
+              </span>
+            </div>
+
             <div class="flex items-center justify-between pt-3 border-t border-gray-200">
               <div>
                 <span class="text-xs text-gray-500 block">Total Tagihan</span>
@@ -307,21 +337,40 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Gateway options note -->
-          <div class="text-xs text-gray-500 space-y-1 bg-white p-3 rounded-xl border border-gray-100">
-            <p class="font-semibold text-gray-700">Didukung oleh Xendit Secure Gateway:</p>
-            <p>QRIS (BCA, Mandiri, GoPay, OVO, ShopeePay), Virtual Account Bank, dan Kartu Kredit.</p>
+          <!-- Gateway options & payment channels badges -->
+          <div class="space-y-2 bg-gray-50/80 p-3.5 rounded-2xl border border-gray-200/80">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-gray-800">Saluran Pembayaran Resmi:</span>
+              <span class="text-[10px] text-forest-700 bg-forest-50 px-2 py-0.5 rounded-full border border-forest-100 font-semibold">
+                Verifikasi Otomatis
+              </span>
+            </div>
+            <p class="text-[11px] text-gray-500">
+              Didukung oleh Xendit Secure Gateway. Pilih metode saat dialihkan:
+            </p>
+            <div class="flex flex-wrap gap-1.5 pt-0.5">
+              <span class="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold bg-white text-gray-800 border border-gray-200 shadow-2xs">
+                QRIS (BCA, GoPay, OVO, ShopeePay)
+              </span>
+              <span class="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium bg-white text-gray-700 border border-gray-200 shadow-2xs">
+                Virtual Account Bank
+              </span>
+              <span class="inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-medium bg-white text-gray-700 border border-gray-200 shadow-2xs">
+                Kartu Kredit / Debit
+              </span>
+            </div>
           </div>
 
           <!-- Action CTA -->
           <div class="space-y-2.5 pt-2">
             <button
               type="button"
-              class="w-full py-3 px-4 rounded-xl font-bold text-sm bg-safety-600 hover:bg-safety-700 text-white flex items-center justify-center gap-2 shadow-md transition-all active:scale-[0.99]"
+              class="w-full py-3.5 px-4 rounded-xl font-bold text-sm bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isExpired"
               @click="openPaymentGateway"
             >
-              <span>Bayar via Xendit</span>
-              <ExternalLink class="w-4 h-4" />
+              <span>{{ isExpired ? 'Batas Waktu Pembayaran Habis' : 'Bayar Sekarang' }}</span>
+              <ExternalLink v-if="!isExpired" class="w-4 h-4" />
             </button>
 
             <button

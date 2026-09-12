@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Ticket,
@@ -15,6 +15,7 @@ import {
   PackageOpen,
   ArrowLeft,
   ShieldCheck,
+  AlertCircle,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -23,21 +24,46 @@ import { formatRupiah, formatDateIndonesia } from '@/lib/formatters'
 
 const router = useRouter()
 const cartStore = useCartStore()
+const actionError = ref<string | null>(null)
 
 const SERVICE_FEE = 2500
 
-function handleIncrement(itemId: number, currentQty: number) {
-  cartStore.updateQuantity(itemId, currentQty + 1)
-}
-
-function handleDecrement(itemId: number, currentQty: number) {
-  if (currentQty > 1) {
-    cartStore.updateQuantity(itemId, currentQty - 1)
+async function handleIncrement(itemId: number, currentQty: number) {
+  actionError.value = null
+  try {
+    await cartStore.updateQuantity(itemId, currentQty + 1)
+  } catch (err: any) {
+    actionError.value = cartStore.errorMessage || 'Gagal menambah kuantitas item.'
   }
 }
 
-function handleRemove(itemId: number) {
-  cartStore.removeItem(itemId)
+async function handleDecrement(itemId: number, currentQty: number) {
+  if (currentQty > 1) {
+    actionError.value = null
+    try {
+      await cartStore.updateQuantity(itemId, currentQty - 1)
+    } catch (err: any) {
+      actionError.value = cartStore.errorMessage || 'Gagal mengurangi kuantitas item.'
+    }
+  }
+}
+
+async function handleRemove(itemId: number) {
+  actionError.value = null
+  try {
+    await cartStore.removeItem(itemId)
+  } catch (err: any) {
+    actionError.value = cartStore.errorMessage || 'Gagal menghapus item dari keranjang.'
+  }
+}
+
+async function handleClearCart() {
+  actionError.value = null
+  try {
+    await cartStore.clearCart()
+  } catch (err: any) {
+    actionError.value = cartStore.errorMessage || 'Gagal mengosongkan keranjang.'
+  }
 }
 
 function handleProceedToCheckout() {
@@ -67,11 +93,29 @@ onMounted(() => {
         variant="ghost"
         size="sm"
         class="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl gap-1.5"
-        @click="cartStore.clearCart()"
+        @click="handleClearCart"
       >
         <Trash2 class="w-3.5 h-3.5" />
         <span>Kosongkan Keranjang</span>
       </Button>
+    </div>
+
+    <!-- Error Alert Banner -->
+    <div
+      v-if="actionError || cartStore.errorMessage"
+      class="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 flex items-start gap-3 text-xs shadow-xs"
+    >
+      <AlertCircle class="w-4 h-4 shrink-0 mt-0.5" />
+      <div class="flex-1">
+        <p class="font-semibold">{{ actionError || cartStore.errorMessage }}</p>
+      </div>
+      <button
+        type="button"
+        class="text-rose-400 hover:text-rose-600 dark:hover:text-rose-200 font-bold ml-2 transition-colors"
+        @click="actionError = null; cartStore.errorMessage = null"
+      >
+        ✕
+      </button>
     </div>
 
     <!-- Empty State -->
@@ -290,8 +334,10 @@ onMounted(() => {
 
           <div class="space-y-2.5 text-xs text-slate-600 dark:text-slate-400">
             <div class="flex items-center justify-between">
-              <span>Total Item:</span>
-              <strong class="text-slate-900 dark:text-slate-100">{{ cartStore.totalItems }} Item</strong>
+              <span>Jumlah Item:</span>
+              <strong class="text-slate-900 dark:text-slate-100">
+                {{ cartStore.cart?.items?.length || 0 }} Jenis ({{ cartStore.totalItems }} Pcs/Org)
+              </strong>
             </div>
 
             <div class="flex items-center justify-between">

@@ -27,12 +27,12 @@
       <div
         v-if="existingKyc"
         class="kyc-status-banner q-mb-md"
-        :class="`is-${existingKyc.status}`"
+        :class="`is-${normalizedStatus}`"
       >
         <q-icon name="shield" size="18px" />
         <span
           >Status KYC Saat Ini:
-          <strong>{{ formatKycStatus(existingKyc.status) }}</strong></span
+          <strong>{{ formatKycStatus(rawStatus) }}</strong></span
         >
       </div>
 
@@ -167,14 +167,30 @@ onMounted(async () => {
   }
 })
 
+const rawStatus = computed(() => {
+  return (
+    existingKyc.value?.status_verifikasi ||
+    existingKyc.value?.status ||
+    'unverified'
+  )
+})
+
+const normalizedStatus = computed(() => {
+  if (rawStatus.value === 'disetujui') return 'verified'
+  if (rawStatus.value === 'ditolak') return 'rejected'
+  return rawStatus.value
+})
+
 const isVerified = computed(() => {
-  return existingKyc.value?.status === 'verified'
+  return normalizedStatus.value === 'verified'
 })
 
 function formatKycStatus(status) {
   const map = {
+    disetujui: 'Terverifikasi (Approved)',
     verified: 'Terverifikasi (Approved)',
     pending: 'Sedang Ditinjau Admin',
+    ditolak: 'Ditolak (Perlu Perbaikan)',
     rejected: 'Ditolak (Perlu Perbaikan)'
   }
   return map[status] || status
@@ -279,5 +295,29 @@ async function handleSubmit() {
   width: 100%;
   height: 44px;
   justify-content: center;
+}
+
+.kyc-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+
+  &.is-verified {
+    background: #ecfdf5;
+    color: #047857;
+  }
+  &.is-pending {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  &.is-unverified,
+  &.is-rejected {
+    background: #fee2e2;
+    color: #991b1b;
+  }
 }
 </style>

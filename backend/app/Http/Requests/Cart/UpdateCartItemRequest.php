@@ -16,6 +16,18 @@ class UpdateCartItemRequest extends FormRequest
     }
 
     /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('quantity') && ! $this->has('qty')) {
+            $this->merge([
+                'qty' => $this->input('quantity'),
+            ]);
+        }
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -24,6 +36,7 @@ class UpdateCartItemRequest extends FormRequest
     {
         return [
             'qty' => ['nullable', 'integer', 'min:1'],
+            'quantity' => ['nullable', 'integer', 'min:1'],
             'tanggal_mulai_sewa' => ['nullable', 'date', 'date_format:Y-m-d'],
             'tanggal_selesai_sewa' => ['nullable', 'date', 'date_format:Y-m-d', 'after_or_equal:tanggal_mulai_sewa'],
             'catatan_item' => ['nullable', 'array'],
@@ -39,6 +52,7 @@ class UpdateCartItemRequest extends FormRequest
     {
         return [
             'qty.min' => 'Jumlah produk minimal 1.',
+            'quantity.min' => 'Jumlah produk minimal 1.',
             'tanggal_selesai_sewa.after_or_equal' => 'Tanggal selesai sewa harus setelah tanggal mulai sewa.',
         ];
     }

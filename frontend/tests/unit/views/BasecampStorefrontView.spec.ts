@@ -20,6 +20,20 @@ vi.mock('@/api/pendakiProducts', () => ({
   },
 }))
 
+vi.mock('@/api/pendakiBasecamps', () => ({
+  pendakiBasecampsApi: {
+    getBasecampById: vi.fn().mockResolvedValue({
+      status: 'success',
+      data: {
+        id: 10,
+        nama_basecamp: 'Basecamp Merbabu Selo',
+        jam_operasional: '24 Jam',
+        mitra: { id: 2, nama_mitra: 'Koperasi Paguyuban Selo' },
+      },
+    }),
+  },
+}))
+
 describe('BasecampStorefrontView View Component (Task 3.5)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())

@@ -30,9 +30,17 @@ export const useAuthStore = defineStore('auth', () => {
   const isPendaki = computed<boolean>(() => user.value?.role === 'pendaki')
 
   // KYC Getters for Climbers
-  const kycStatus = computed<string>(() => user.value?.pendaki?.status_verifikasi || 'unverified')
+  const kycStatus = computed<string>(() => {
+    const raw = user.value?.pendaki?.status_verifikasi
+    if (!raw) return 'unverified'
+    if (raw === 'disetujui' || raw === 'verified') return 'verified'
+    if (raw === 'ditolak' || raw === 'rejected') return 'rejected'
+    if (raw === 'pending') return 'pending'
+    return raw
+  })
   const isKycVerified = computed<boolean>(() => kycStatus.value === 'verified')
   const isKycPending = computed<boolean>(() => kycStatus.value === 'pending')
+  const isKycRejected = computed<boolean>(() => kycStatus.value === 'rejected')
   const pendakiProfile = computed(() => user.value?.pendaki || null)
 
   function setUserData(userData: User) {
@@ -82,6 +90,10 @@ export const useAuthStore = defineStore('auth', () => {
         localStorage.setItem('user_data', JSON.stringify(response.data))
         
         syncMitraContext(response.data)
+        
+        if (response.data.role === 'pendaki') {
+          fetchKycStatus()
+        }
 
         return response.data
       }
@@ -173,6 +185,7 @@ export const useAuthStore = defineStore('auth', () => {
     kycStatus,
     isKycVerified,
     isKycPending,
+    isKycRejected,
     pendakiProfile,
     setUserData,
     updatePendakiProfile,

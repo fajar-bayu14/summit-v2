@@ -114,7 +114,14 @@ onMounted(async () => {
 })
 
 const kycStatus = computed(() => {
-  return kycData.value?.status || profile.value?.kyc_status || 'unverified'
+  const raw =
+    kycData.value?.status_verifikasi ||
+    kycData.value?.status ||
+    profile.value?.pendaki?.status_verifikasi ||
+    profile.value?.kyc_status
+  if (raw === 'disetujui') return 'verified'
+  if (raw === 'ditolak') return 'rejected'
+  return raw || 'unverified'
 })
 
 const kycIcon = computed(() => {

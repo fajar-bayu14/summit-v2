@@ -29,6 +29,8 @@ export const useCartStore = defineStore('cart', () => {
       cart.value.items.find(
         item =>
           item.produk?.kategori === 'tiket' ||
+          item.produk?.kategori === 'ticket' ||
+          Boolean((item.produk as any)?.tiket) ||
           (item.produk as any)?.tipe === 'tiket' ||
           (item as any).tipe_produk === 'tiket'
       ) || null
@@ -39,10 +41,8 @@ export const useCartStore = defineStore('cart', () => {
     if (!cart.value?.items) return []
     return cart.value.items.filter(
       item =>
-        item.produk?.kategori === 'rental' ||
+        ['rental', 'merchandise', 'konsumsi', 'kuliner'].includes(item.produk?.kategori || '') ||
         (item.produk as any)?.tipe === 'rental' ||
-        item.produk?.kategori === 'merchandise' ||
-        item.produk?.kategori === 'konsumsi' ||
         (item as any).tipe_produk === 'rental'
     )
   })
@@ -51,7 +51,7 @@ export const useCartStore = defineStore('cart', () => {
     if (!cart.value?.items) return []
     return cart.value.items.filter(
       item =>
-        item.produk?.kategori === 'jasa' ||
+        ['jasa', 'guide', 'porter', 'transport', 'parkir'].includes(item.produk?.kategori || '') ||
         (item.produk as any)?.tipe === 'jasa' ||
         (item as any).tipe_produk === 'jasa'
     )

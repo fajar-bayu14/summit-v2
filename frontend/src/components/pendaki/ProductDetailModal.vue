@@ -13,6 +13,7 @@ import {
   Plus,
   Minus,
   ShoppingCart,
+  Loader2,
 } from 'lucide-vue-next'
 import { formatRupiah } from '@/lib/formatters'
 import type { ProdukCatalogItem } from '@/types/pendakiProduct'
@@ -34,6 +35,7 @@ const emit = defineEmits<{
 }>()
 
 const quantity = ref(1)
+const isAdding = ref(false)
 
 const maxStock = computed(() => props.product?.stok || 99)
 const isOutOfStock = computed(() => (props.product?.stok ?? 1) <= 0)
@@ -51,9 +53,11 @@ function decrement() {
 }
 
 function handleAdd() {
-  if (!props.product || isOutOfStock.value) return
+  if (!props.product || isOutOfStock.value || isAdding.value) return
+  isAdding.value = true
   emit('add-to-cart', props.product, quantity.value)
   emit('update:isOpen', false)
+  isAdding.value = false
 }
 </script>
 
@@ -138,11 +142,12 @@ function handleAdd() {
 
             <Button
               class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs gap-2 shadow-xs"
-              :disabled="isOutOfStock"
+              :disabled="isOutOfStock || isAdding"
               @click="handleAdd"
             >
-              <ShoppingCart class="w-4 h-4" />
-              <span>+ Masukkan Keranjang</span>
+              <Loader2 v-if="isAdding" class="w-4 h-4 animate-spin" />
+              <ShoppingCart v-else class="w-4 h-4" />
+              <span>{{ isAdding ? 'Menambahkan...' : '+ Masukkan Keranjang' }}</span>
             </Button>
           </div>
         </div>

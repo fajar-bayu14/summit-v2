@@ -99,10 +99,41 @@ describe('Pendaki Navigation & Layout Shell Components (Task 0.3)', () => {
       expect(wrapper.text()).toContain('Fajar Pendaki')
       expect(wrapper.text()).not.toContain('Masuk')
     })
+
+    it('should link cart icon to /pendaki/cart and pesanan to /pendaki/orders in user dropdown', async () => {
+      const authStore = useAuthStore()
+      authStore.token = 'test-token'
+      authStore.user = {
+        id: 1,
+        name: 'Fajar Pendaki',
+        email: 'fajar@example.com',
+        role: 'pendaki',
+      }
+
+      const wrapper = mount(PendakiHeader, {
+        props: { cartItemCount: 1 },
+        global: {
+          stubs: {
+            'router-link': {
+              props: ['to'],
+              template: '<a :href="to"><slot /></a>',
+            },
+          },
+        },
+      })
+
+      const cartLink = wrapper.find('a[href="/pendaki/cart"]')
+      expect(cartLink.exists()).toBe(true)
+
+      // Open dropdown
+      await wrapper.find('button.cursor-pointer').trigger('click')
+      const ordersLink = wrapper.find('a[href="/pendaki/orders"]')
+      expect(ordersLink.exists()).toBe(true)
+    })
   })
 
   describe('PendakiMobileNav Component', () => {
-    it('should render 5 quick navigation buttons', () => {
+    it('should render 5 quick navigation buttons with correct routes for Keranjang and Pesanan', () => {
       const wrapper = mount(PendakiMobileNav, {
         props: {
           cartItemCount: 3,
@@ -110,7 +141,8 @@ describe('Pendaki Navigation & Layout Shell Components (Task 0.3)', () => {
         global: {
           stubs: {
             'router-link': {
-              template: '<a><slot /></a>',
+              props: ['to'],
+              template: '<a :href="to"><slot /></a>',
             },
             'router-view': true,
           },
@@ -123,6 +155,9 @@ describe('Pendaki Navigation & Layout Shell Components (Task 0.3)', () => {
       expect(wrapper.text()).toContain('Pesanan')
       expect(wrapper.text()).toContain('Akun')
       expect(wrapper.text()).toContain('3') // Cart badge
+
+      expect(wrapper.find('a[href="/pendaki/cart"]').exists()).toBe(true)
+      expect(wrapper.find('a[href="/pendaki/orders"]').exists()).toBe(true)
     })
   })
 

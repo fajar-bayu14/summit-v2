@@ -1,27 +1,38 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import PendakiHeader from '@/components/pendaki/PendakiHeader.vue'
 import PendakiMobileNav from '@/components/pendaki/PendakiMobileNav.vue'
 import { Mountain, ShieldCheck, HeartHandshake, PhoneCall } from 'lucide-vue-next'
+import { useCartStore } from '@/stores/cart'
+import { useAuthStore } from '@/stores/auth'
 
-const cartCount = ref(0)
+const cartStore = useCartStore()
+const authStore = useAuthStore()
+
+const cartCount = computed(() => cartStore.totalItems)
+
+onMounted(async () => {
+  if (authStore.isAuthenticated && !cartStore.cart) {
+    await cartStore.fetchCart()
+  }
+})
 </script>
 
 <template>
   <div class="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-emerald-100 selection:text-emerald-900">
     <!-- E-Commerce Sticky Header -->
-    <PendakiHeader :cart-item-count="cartCount" />
+    <PendakiHeader :cart-item-count="cartCount" class="print:hidden" />
 
     <!-- Main Storefront & Portal Viewport -->
-    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 md:pb-8">
+    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-20 md:pb-8 print:p-0 print:m-0 print:max-w-none print:w-full">
       <router-view />
     </main>
 
     <!-- Mobile Bottom Navigation Bar -->
-    <PendakiMobileNav :cart-item-count="cartCount" />
+    <PendakiMobileNav :cart-item-count="cartCount" class="print:hidden" />
 
     <!-- E-Commerce Footer -->
-    <footer class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-10 text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-auto hidden md:block">
+    <footer class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 py-10 text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-auto hidden md:block print:hidden">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <!-- Col 1: Brand Info -->

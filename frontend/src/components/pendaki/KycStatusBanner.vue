@@ -21,7 +21,12 @@ const emit = defineEmits<{
   (e: 'verify'): void
 }>()
 
-const normalizedStatus = computed(() => (props.status || 'unverified').toLowerCase())
+const normalizedStatus = computed(() => {
+  const raw = (props.status || 'unverified').toLowerCase()
+  if (raw === 'disetujui' || raw === 'verified') return 'verified'
+  if (raw === 'ditolak' || raw === 'rejected') return 'rejected'
+  return raw
+})
 </script>
 
 <template>

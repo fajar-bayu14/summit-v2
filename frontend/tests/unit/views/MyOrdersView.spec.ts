@@ -8,6 +8,9 @@ vi.mock('vue-router', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
+  useRoute: () => ({
+    query: {},
+  }),
 }))
 
 vi.mock('@/api/pendakiOrders', () => ({
@@ -38,6 +41,7 @@ describe('MyOrdersView Component (Task 6.2)', () => {
         stubs: {
           'router-link': { template: '<a><slot /></a>' },
           PaymentModal: true,
+          OrderDetailModal: true,
         },
       },
     })
@@ -102,6 +106,7 @@ describe('MyOrdersView Component (Task 6.2)', () => {
         stubs: {
           'router-link': { template: '<a><slot /></a>' },
           PaymentModal: true,
+          OrderDetailModal: true,
         },
       },
     })
@@ -126,6 +131,7 @@ describe('MyOrdersView Component (Task 6.2)', () => {
         stubs: {
           'router-link': { template: '<a><slot /></a>' },
           PaymentModal: true,
+          OrderDetailModal: true,
         },
       },
     })

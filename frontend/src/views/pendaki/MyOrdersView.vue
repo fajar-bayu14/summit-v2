@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import {
   Search,
   Calendar,
@@ -13,16 +13,20 @@ import {
   PackageOpen,
   ArrowRight,
   AlertCircle,
+  CheckCircle2,
+  FileText,
 } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { pendakiOrdersApi } from '@/api/pendakiOrders'
 import PaymentModal from '@/components/pendaki/PaymentModal.vue'
+import OrderDetailModal from '@/components/pendaki/OrderDetailModal.vue'
 import { formatRupiah, formatDateIndonesia, formatOrderStatus } from '@/lib/formatters'
 import { extractApiError } from '@/lib/normalizer'
 import type { PesananDetail } from '@/types/pendakiOrder'
 import type { Pesanan } from '@/types/pendakiCheckout'
 
 const router = useRouter()
+const route = useRoute()
 
 const orders = ref<PesananDetail[]>([])
 const isLoading = ref(false)
@@ -36,12 +40,17 @@ const totalPages = ref(1)
 const isPaymentModalOpen = ref(false)
 const selectedOrderForPayment = ref<Pesanan | null>(null)
 
+// Order detail modal state
+const isDetailModalOpen = ref(false)
+const selectedOrderForDetail = ref<PesananDetail | null>(null)
+
 const statusTabs = [
   { key: 'all', label: 'Semua' },
   { key: 'pending', label: 'Menunggu Bayar' },
-  { key: 'paid', label: 'Siap Check-In' },
+  { key: 'paid', label: 'Sudah Bayar / Siap' },
   { key: 'on_going', label: 'Sedang Berjalan' },
   { key: 'completed', label: 'Selesai' },
+  { key: 'expired', label: 'Kadaluarsa' },
   { key: 'cancelled', label: 'Dibatalkan' },
 ]
 
@@ -115,18 +124,50 @@ function handlePaymentSuccess() {
   fetchOrders()
 }
 
+function handleOpenDetail(order: PesananDetail) {
+  selectedOrderForDetail.value = order
+  isDetailModalOpen.value = true
+}
+
+function handlePayFromDetail(order: PesananDetail) {
+  isDetailModalOpen.value = false
+  handlePayOrder(order)
+}
+
 watch(activeTab, () => {
   currentPage.value = 1
   fetchOrders()
 })
 
-onMounted(() => {
-  fetchOrders()
+onMounted(async () => {
+  await fetchOrders()
+  if (route.query.invoice) {
+    const match = orders.value.find(o => o.invoice === route.query.invoice)
+    if (match) {
+      handleOpenDetail(match)
+    }
+  }
 })
 </script>
 
 <template>
   <div class="space-y-8 max-w-5xl mx-auto pb-20">
+    <!-- Success Banner from Checkout -->
+    <div
+      v-if="route.query.success === 'true'"
+      class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 flex items-center justify-between gap-3 shadow-xs animate-in fade-in-50 slide-in-from-top-3"
+    >
+      <div class="flex items-center gap-2.5">
+        <CheckCircle2 class="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+        <div>
+          <p class="font-bold">Pemesanan Berhasil Dibuat!</p>
+          <p class="text-[11px] opacity-90">
+            Invoice: <strong>{{ route.query.invoice }}</strong>. Anda dapat melihat rincian pembayaran atau langsung membayar tagihan di bawah.
+          </p>
+        </div>
+      </div>
+    </div>
+
     <!-- Header Title -->
     <div>
       <h1 class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-100 font-display">
@@ -294,6 +335,17 @@ onMounted(() => {
             </div>
 
             <div class="space-y-2">
+              <!-- Detail & Payment Audit Button -->
+              <Button
+                variant="outline"
+                size="sm"
+                class="w-full rounded-xl text-xs font-bold gap-1.5 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
+                @click="handleOpenDetail(order)"
+              >
+                <FileText class="w-3.5 h-3.5 text-slate-500" />
+                <span>Detail &amp; Pembayaran</span>
+              </Button>
+
               <!-- Pending status actions -->
               <template v-if="order.status === 'pending'">
                 <Button
@@ -352,7 +404,7 @@ onMounted(() => {
                 </Button>
               </template>
 
-              <!-- Cancelled -->
+              <!-- Cancelled / Expired -->
               <template v-else>
                 <Button
                   variant="outline"
@@ -374,6 +426,14 @@ onMounted(() => {
       v-model:is-open="isPaymentModalOpen"
       :order="selectedOrderForPayment"
       @payment-success="handlePaymentSuccess"
+    />
+
+    <!-- Order Detail & Payment Audit Modal -->
+    <OrderDetailModal
+      v-model:is-open="isDetailModalOpen"
+      :order="selectedOrderForDetail"
+      @pay-order="handlePayFromDetail"
+      @order-updated="fetchOrders"
     />
   </div>
 </template>

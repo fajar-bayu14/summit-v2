@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   Compass,
@@ -28,6 +28,12 @@ const isKycModalOpen = ref(false)
 
 const kycStatus = computed(() => authStore.kycStatus)
 const rejectionReason = computed(() => authStore.user?.pendaki?.alasan_penolakan || null)
+
+onMounted(async () => {
+  if (authStore.isAuthenticated && authStore.isPendaki) {
+    await authStore.fetchKycStatus()
+  }
+})
 
 const quickCategories = [
   {
@@ -79,7 +85,7 @@ function handleSearch() {
 <template>
   <div class="space-y-8 pb-12">
     <!-- KYC Banner Alert for Logged-in Pendaki -->
-    <div v-if="authStore.isAuthenticated && authStore.isPendaki && kycStatus !== 'verified'">
+    <div v-if="authStore.isAuthenticated && authStore.isPendaki && !authStore.isKycVerified">
       <KycStatusBanner
         :status="kycStatus"
         :rejection-reason="rejectionReason"
@@ -183,6 +189,7 @@ function handleSearch() {
     <KycSubmissionModal
       :is-open="isKycModalOpen"
       @update:is-open="isKycModalOpen = $event"
+      @submitted="authStore.updatePendakiProfile($event)"
     />
   </div>
 </template>

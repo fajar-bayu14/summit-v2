@@ -45,6 +45,7 @@ const emit = defineEmits<{
 function initMembers() {
   const current = [...props.modelValue]
   const targetCount = Math.max(1, props.ticketQty)
+  let changed = false
 
   if (current.length === 0) {
     // Member 1 is Ketua
@@ -55,6 +56,37 @@ function initMembers() {
       telepon_darurat: props.userProfile?.telepon_darurat || '',
       hubungan_darurat: props.userProfile?.hubungan_darurat || '',
     })
+    changed = true
+  } else if (current[0] && props.userProfile) {
+    // If Ketua is already initialized but empty and userProfile just loaded
+    const leader = { ...current[0] }
+    let updatedLeader = false
+
+    if (!leader.nama_anggota && props.userProfile.name) {
+      leader.nama_anggota = props.userProfile.name
+      updatedLeader = true
+    }
+    if (!leader.nik_identitas && props.userProfile.nik) {
+      leader.nik_identitas = props.userProfile.nik
+      updatedLeader = true
+    }
+    if (!leader.telepon && props.userProfile.telepon) {
+      leader.telepon = props.userProfile.telepon
+      updatedLeader = true
+    }
+    if (!leader.telepon_darurat && props.userProfile.telepon_darurat) {
+      leader.telepon_darurat = props.userProfile.telepon_darurat
+      updatedLeader = true
+    }
+    if (!leader.hubungan_darurat && props.userProfile.hubungan_darurat) {
+      leader.hubungan_darurat = props.userProfile.hubungan_darurat
+      updatedLeader = true
+    }
+
+    if (updatedLeader) {
+      current[0] = leader
+      changed = true
+    }
   }
 
   // Ensure count matches targetCount if ticketQty provided
@@ -66,9 +98,10 @@ function initMembers() {
       telepon_darurat: current[0]?.telepon_darurat || '',
       hubungan_darurat: current[0]?.hubungan_darurat || '',
     })
+    changed = true
   }
 
-  if (current.length !== props.modelValue.length) {
+  if (changed || current.length !== props.modelValue.length) {
     emit('update:modelValue', current)
   }
 }
@@ -84,6 +117,30 @@ watch(
 function updateMember(index: number, field: keyof PesananAnggotaPayload, value: string) {
   const updated = props.modelValue.map((m, i) => (i === index ? { ...m, [field]: value } : m))
   emit('update:modelValue', updated)
+}
+
+function handleNikInput(event: Event, index: number) {
+  const target = event.target as HTMLInputElement
+  const rawValue = target.value
+  const cleaned = rawValue.replace(/\D/g, '').slice(0, 16)
+
+  if (target.value !== cleaned) {
+    target.value = cleaned
+  }
+
+  updateMember(index, 'nik_identitas', cleaned)
+}
+
+function handleNikPaste(event: ClipboardEvent, index: number) {
+  const pasted = event.clipboardData?.getData('text') || ''
+  if (!pasted) return
+
+  event.preventDefault()
+  const cleaned = pasted.replace(/\D/g, '').slice(0, 16)
+
+  const target = event.target as HTMLInputElement
+  target.value = cleaned
+  updateMember(index, 'nik_identitas', cleaned)
 }
 
 function addMember() {
@@ -150,8 +207,15 @@ const validationErrors = computed(() => {
     }
     if (!m.nik_identitas.trim()) {
       err.nik = 'NIK identitas wajib diisi'
-    } else if (!/^\d{16}$/.test(m.nik_identitas.trim())) {
-      err.nik = 'NIK harus 16 digit angka'
+    } else {
+      const clean = m.nik_identitas.trim().replace(/\D/g, '')
+      if (clean.length < 16) {
+        err.nik = `NIK harus 16 digit angka (saat ini ${clean.length} digit, kurang ${16 - clean.length} digit)`
+      } else if (clean.length > 16) {
+        err.nik = `NIK harus 16 digit angka (maksimal 16 digit, saat ini ${clean.length} digit)`
+      } else if (!/^\d{16}$/.test(clean)) {
+        err.nik = 'NIK harus 16 digit angka'
+      }
     }
 
     if (Object.keys(err).length > 0) {
@@ -313,9 +377,23 @@ watch(
 
           <!-- NIK KTP -->
           <div>
-            <label :for="`nik-${idx}`" class="block text-xs font-semibold text-gray-700 mb-1">
-              Nomor Induk Kependudukan (NIK 16 Digit) <span class="text-red-500">*</span>
-            </label>
+            <div class="flex items-center justify-between mb-1">
+              <label :for="`nik-${idx}`" class="block text-xs font-semibold text-gray-700">
+                Nomor Induk Kependudukan (NIK 16 Digit) <span class="text-red-500">*</span>
+              </label>
+              <!-- Live Character Counter & Status Indicator -->
+              <span
+                class="text-[11px] font-mono font-medium transition-colors"
+                :class="{
+                  'text-gray-400': !member.nik_identitas,
+                  'text-amber-600': member.nik_identitas && member.nik_identitas.length > 0 && member.nik_identitas.length < 16,
+                  'text-emerald-600 font-semibold': member.nik_identitas && member.nik_identitas.length === 16,
+                  'text-red-600': member.nik_identitas && member.nik_identitas.length > 16,
+                }"
+              >
+                {{ member.nik_identitas ? member.nik_identitas.length : 0 }}/16 digit
+              </span>
+            </div>
             <div class="relative">
               <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                 <IdCard class="w-4 h-4" />
@@ -324,26 +402,30 @@ watch(
                 :id="`nik-${idx}`"
                 type="text"
                 inputmode="numeric"
-                maxlength="16"
+                maxlength="20"
                 :value="member.nik_identitas"
                 placeholder="3301234567890001"
+                aria-label="Nomor Induk Kependudukan 16 Digit"
+                :aria-invalid="!!validationErrors[idx]?.nik"
+                :aria-describedby="validationErrors[idx]?.nik ? `nik-error-${idx}` : undefined"
                 class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border font-mono tracking-wide focus:outline-none focus:ring-2 focus:ring-forest-500 transition-colors"
                 :class="
                   validationErrors[idx]?.nik
                     ? 'border-red-300 bg-red-50/20 text-red-900 focus:border-red-500 focus:ring-red-200'
-                    : 'border-gray-300 focus:border-forest-500'
+                    : member.nik_identitas && member.nik_identitas.length === 16
+                      ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-200'
+                      : 'border-gray-300 focus:border-forest-500'
                 "
                 :disabled="disabled"
-                @input="
-                  updateMember(
-                    idx,
-                    'nik_identitas',
-                    ($event.target as HTMLInputElement).value.replace(/\D/g, '').slice(0, 16)
-                  )
-                "
+                @input="handleNikInput($event, idx)"
+                @paste="handleNikPaste($event, idx)"
               />
             </div>
-            <p v-if="validationErrors[idx]?.nik" class="text-xs text-red-600 mt-1 flex items-center gap-1">
+            <p
+              v-if="validationErrors[idx]?.nik"
+              :id="`nik-error-${idx}`"
+              class="text-xs text-red-600 mt-1 flex items-center gap-1"
+            >
               <AlertCircle class="w-3.5 h-3.5 shrink-0" />
               {{ validationErrors[idx]?.nik }}
             </p>

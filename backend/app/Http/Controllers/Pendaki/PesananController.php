@@ -15,6 +15,7 @@ use Carbon\Carbon;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 use Xendit\XenditSdkException;
@@ -181,10 +182,76 @@ class PesananController extends Controller
 
         $this->authorize('view', $pesanan);
 
+        if ($pesanan->status === 'pending' && $pesanan->pembayaran?->reference_id) {
+            $pesanan = $this->syncPaymentStatusWithXendit($pesanan);
+        }
+
         return response()->json([
             'status' => 'success',
             'data' => new PesananResource($pesanan),
         ]);
+    }
+
+    #[OA\Post(
+        path: '/api/v1/orders/{invoice}/check-status',
+        summary: 'Synchronize and check payment status on demand with Xendit',
+        tags: ['Pesanan (Climber)'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'invoice', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Order payment status checked and synchronized'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 404, description: 'Order not found'),
+        ]
+    )]
+    public function checkPaymentStatus(Request $request, string $invoice): JsonResponse
+    {
+        $pesanan = Pesanan::where('invoice', $invoice)
+            ->with(['user', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran', 'refunds'])
+            ->firstOrFail();
+
+        $this->authorize('view', $pesanan);
+
+        if ($pesanan->status === 'pending' && $pesanan->pembayaran?->reference_id) {
+            $pesanan = $this->syncPaymentStatusWithXendit($pesanan);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Status pembayaran berhasil disinkronkan.',
+            'data' => new PesananResource($pesanan),
+        ]);
+    }
+
+    /**
+     * Active fallback: check payment status with Xendit and mark paid/expired if updated.
+     */
+    protected function syncPaymentStatusWithXendit(Pesanan $pesanan): Pesanan
+    {
+        try {
+            $invoice = $this->xenditService->getInvoice((string) $pesanan->pembayaran->reference_id);
+
+            if ($invoice) {
+                $status = strtoupper((string) $invoice->getStatus());
+                if ($status === 'PAID' || $status === 'SETTLED') {
+                    $payload = json_decode(json_encode($invoice), true) ?: [];
+                    $this->pesananService->markPaid($pesanan, $payload);
+                    $pesanan->refresh()->load(['user', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran', 'refunds']);
+                } elseif ($status === 'EXPIRED') {
+                    $this->pesananService->markExpired($pesanan);
+                    $pesanan->refresh()->load(['user', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran', 'refunds']);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Sinkronisasi pembayaran Xendit on-demand gagal untuk invoice '.$pesanan->invoice, [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $pesanan;
     }
 
     #[OA\Post(

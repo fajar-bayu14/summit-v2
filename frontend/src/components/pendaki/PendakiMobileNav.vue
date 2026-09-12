@@ -35,14 +35,14 @@ const navItems = computed(() => [
   },
   {
     name: 'Keranjang',
-    path: '/pendaki',
+    path: '/pendaki/cart',
     icon: ShoppingCart,
     badge: props.cartItemCount,
     isActive: route.path === '/pendaki/cart',
   },
   {
     name: 'Pesanan',
-    path: '/pendaki',
+    path: '/pendaki/orders',
     icon: FileText,
     isActive: route.path === '/pendaki/orders',
   },

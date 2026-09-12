@@ -128,6 +128,12 @@ class AuthController extends Controller
             ], 403);
         }
 
+        if ($user->role === 'pendaki') {
+            $user->load('pendaki');
+        } elseif ($user->role === 'mitra') {
+            $user->load(['mitra.basecamps.jalur.gunung', 'mitra.staff']);
+        }
+
         $user->tokens()->delete();
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -182,6 +188,12 @@ class AuthController extends Controller
                 'status' => 'error',
                 'message' => 'Invalid or expired OTP code.',
             ], 400);
+        }
+
+        if ($user->role === 'pendaki') {
+            $user->load('pendaki');
+        } elseif ($user->role === 'mitra') {
+            $user->load(['mitra.basecamps.jalur.gunung', 'mitra.staff']);
         }
 
         // Issue Sanctum token after successful verification

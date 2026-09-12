@@ -27,9 +27,19 @@ export function useSecureDocument() {
       documentUrl.value = url
       return url
     } catch (err: any) {
-      error.value = err?.response?.status === 404
-        ? 'Berkas foto identitas tidak ditemukan di server.'
-        : 'Gagal memuat dokumen identitas.'
+      if (err?.response?.status === 404) {
+        error.value = 'Berkas foto identitas tidak ditemukan di server.'
+      } else if (err?.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text()
+          const json = JSON.parse(text)
+          error.value = json.message || 'Gagal memuat dokumen identitas.'
+        } catch {
+          error.value = 'Gagal memuat dokumen identitas.'
+        }
+      } else {
+        error.value = err?.response?.data?.message || 'Gagal memuat dokumen identitas.'
+      }
       return null
     } finally {
       loading.value = false

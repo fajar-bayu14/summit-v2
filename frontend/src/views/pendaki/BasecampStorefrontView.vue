@@ -16,11 +16,13 @@ import { Button } from '@/components/ui/button'
 import TicketQuotaCalendar from '@/components/pendaki/TicketQuotaCalendar.vue'
 import RentalProductGrid from '@/components/pendaki/RentalProductGrid.vue'
 import PorterGuideServiceCards from '@/components/pendaki/PorterGuideServiceCards.vue'
+import FloatingCartBar from '@/components/pendaki/FloatingCartBar.vue'
 import { pendakiProductsApi } from '@/api/pendakiProducts'
 import { pendakiBasecampsApi } from '@/api/pendakiBasecamps'
 import { useBookingStore } from '@/stores/booking'
 import { useCartStore } from '@/stores/cart'
 import { useAuthStore } from '@/stores/auth'
+import { useToast } from '@/composables/useToast'
 import { extractApiError } from '@/lib/normalizer'
 import type { ProdukCatalogItem } from '@/types/pendakiProduct'
 import type { BasecampMitraSummary } from '@/types/pendakiMountain'
@@ -30,6 +32,7 @@ const router = useRouter()
 const bookingStore = useBookingStore()
 const cartStore = useCartStore()
 const authStore = useAuthStore()
+const toast = useToast()
 
 const basecampId = computed(() => Number(route.params.id))
 const activeTab = ref<'tiket' | 'rental' | 'jasa'>('tiket')
@@ -61,11 +64,20 @@ const basecampInfo = computed(() => {
   if (basecampDetail.value) {
     return basecampDetail.value
   }
-  if (products.value.length > 0 && products.value[0].basecamp) {
-    return products.value[0].basecamp
+  const withBc = products.value.find(p => p.basecamp)?.basecamp
+  if (withBc) {
+    return withBc
   }
   return bookingStore.selectedBasecamp || null
 })
+
+function getTodayLocalDateString(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
 async function fetchStorefrontData() {
   if (!basecampId.value) return
@@ -95,13 +107,13 @@ async function fetchStorefrontData() {
 
     if (basecampRes.status === 'fulfilled' && basecampRes.value.data) {
       basecampDetail.value = basecampRes.value.data
-      bookingStore.selectBasecamp(basecampDetail.value)
+      if (basecampDetail.value.jalur?.gunung) {
+        bookingStore.selectMountain(basecampDetail.value.jalur.gunung)
+      }
       if (basecampDetail.value.jalur) {
         bookingStore.selectTrail(basecampDetail.value.jalur)
-        if (basecampDetail.value.jalur.gunung) {
-          bookingStore.selectMountain(basecampDetail.value.jalur.gunung)
-        }
       }
+      bookingStore.selectBasecamp(basecampDetail.value)
     }
   } catch (err) {
     errorMessage.value = extractApiError(err).message
@@ -110,8 +122,13 @@ async function fetchStorefrontData() {
   }
 }
 
-function showCartToast(message: string) {
+function showCartToast(message: string, isError = false) {
   cartToastMessage.value = message
+  if (isError) {
+    toast.error(message, 'Keranjang Belanja')
+  } else {
+    toast.success(message, 'Keranjang Belanja')
+  }
   setTimeout(() => {
     cartToastMessage.value = null
   }, 4000)
@@ -139,7 +156,7 @@ async function handleAddTicket(payload: {
     (cartStore.cart as any)?.jalur_id
 
   if (!jalurId) {
-    showCartToast('Silakan pilih jalur pendakian terlebih dahulu.')
+    showCartToast('Silakan pilih jalur pendakian terlebih dahulu.', true)
     return
   }
 
@@ -152,7 +169,7 @@ async function handleAddTicket(payload: {
     })
     showCartToast(`Tiket SIMAKSI (${payload.climberCount} orang) untuk tanggal ${payload.selectedDate} berhasil ditambahkan ke keranjang!`)
   } catch (err: any) {
-    showCartToast(err.message || 'Gagal menambahkan tiket ke keranjang.')
+    showCartToast(err.message || 'Gagal menambahkan tiket ke keranjang.', true)
   }
 }
 
@@ -167,10 +184,13 @@ async function handleAddRentalToCart(product: ProdukCatalogItem, quantity: numbe
     basecampInfo.value?.jalur_id ||
     (basecampInfo.value as any)?.jalur?.id ||
     (cartStore.cart as any)?.jalur_id
-  const tanggalBooking = bookingStore.bookingStartDate || (cartStore.cart as any)?.tanggal_booking || new Date().toISOString().split('T')[0]
+  const tanggalBooking =
+    (cartStore.cart as any)?.tanggal_booking ||
+    bookingStore.bookingStartDate ||
+    getTodayLocalDateString()
 
   if (!jalurId) {
-    showCartToast('Silakan pilih gunung & jalur terlebih dahulu.')
+    showCartToast('Silakan pilih gunung & jalur terlebih dahulu.', true)
     return
   }
 
@@ -185,7 +205,7 @@ async function handleAddRentalToCart(product: ProdukCatalogItem, quantity: numbe
     })
     showCartToast(`${quantity}x ${product.nama_produk} berhasil dimasukkan ke keranjang.`)
   } catch (err: any) {
-    showCartToast(err.message || 'Gagal menambahkan item ke keranjang.')
+    showCartToast(err.message || 'Gagal menambahkan item ke keranjang.', true)
   }
 }
 
@@ -204,10 +224,13 @@ async function handleAddService(payload: {
     basecampInfo.value?.jalur_id ||
     (basecampInfo.value as any)?.jalur?.id ||
     (cartStore.cart as any)?.jalur_id
-  const tanggalBooking = bookingStore.bookingStartDate || (cartStore.cart as any)?.tanggal_booking || new Date().toISOString().split('T')[0]
+  const tanggalBooking =
+    (cartStore.cart as any)?.tanggal_booking ||
+    bookingStore.bookingStartDate ||
+    getTodayLocalDateString()
 
   if (!jalurId) {
-    showCartToast('Silakan pilih gunung & jalur terlebih dahulu.')
+    showCartToast('Silakan pilih gunung & jalur terlebih dahulu.', true)
     return
   }
 
@@ -221,7 +244,7 @@ async function handleAddService(payload: {
     })
     showCartToast(`Layanan ${payload.product.nama_produk} (${payload.quantity}x) berhasil dipesan.`)
   } catch (err: any) {
-    showCartToast(err.message || 'Gagal menambahkan layanan ke keranjang.')
+    showCartToast(err.message || 'Gagal menambahkan layanan ke keranjang.', true)
   }
 }
 
@@ -407,5 +430,8 @@ onMounted(async () => {
         />
       </div>
     </div>
+
+    <!-- Sticky Floating Cart Bar -->
+    <FloatingCartBar />
   </div>
 </template>

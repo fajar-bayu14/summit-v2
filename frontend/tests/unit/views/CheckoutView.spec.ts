@@ -238,4 +238,50 @@ describe('CheckoutView Component (Task 5.4)', () => {
     expect(vm.createdOrder).toEqual(mockResponse.data)
     expect(vm.isPaymentModalOpen).toBe(true)
   })
+
+  it('should only render validation hints box when there are invalid fields, and never show empty Perhatian box', async () => {
+    const cartStore = useCartStore()
+    const authStore = useAuthStore()
+
+    authStore.user = {
+      id: 1,
+      name: 'Fajar Bayu',
+      role: 'pendaki',
+    } as any
+
+    cartStore.cart = {
+      id: 1,
+      total_item: 1,
+      subtotal: 50000,
+      items: [{ id: 1, qty: 1, tipe_produk: 'tiket', subtotal: 50000 }],
+    } as any
+
+    const wrapper = mount(CheckoutView, {
+      global: {
+        stubs: {
+          'router-link': true,
+          KycStatusBanner: true,
+          ClimberManifestForm: true,
+          SafetySopChecklist: true,
+          PaymentModal: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    const vm = wrapper.vm as any
+
+    // Initially invalid: manifest is invalid and sop is not agreed
+    expect(wrapper.text()).toContain('Perhatian:')
+    expect(wrapper.text()).toContain('Lengkapi nama & 16-digit NIK semua anggota manifes.')
+    expect(wrapper.text()).toContain('Centang kotak persetujuan SOP Pendakian.')
+
+    // When manifest becomes valid and SOP agreed
+    vm.isManifestValid = true
+    vm.sopAgreed = true
+    await wrapper.vm.$nextTick()
+
+    // The Perhatian box must NOT be rendered at all (no empty box)
+    expect(wrapper.text()).not.toContain('Perhatian:')
+  })
 })

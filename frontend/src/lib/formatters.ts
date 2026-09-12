@@ -168,7 +168,8 @@ export function formatKycStatus(status: string | null | undefined): {
   badgeClass: string
   description: string
 } {
-  const normalized = (status || 'unverified').toLowerCase()
+  const raw = (status || 'unverified').toLowerCase()
+  const normalized = raw === 'disetujui' ? 'verified' : raw === 'ditolak' ? 'rejected' : raw
   switch (normalized) {
     case 'verified':
       return {

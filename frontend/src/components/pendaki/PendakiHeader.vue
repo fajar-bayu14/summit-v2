@@ -97,7 +97,7 @@ async function handleLogout() {
       <div class="flex items-center gap-3">
         <!-- Shopping Cart Icon Button -->
         <router-link
-          to="/pendaki"
+          to="/pendaki/cart"
           class="relative p-2 rounded-xl text-slate-700 hover:text-emerald-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-800 transition-colors"
           title="Keranjang Belanja"
         >
@@ -151,7 +151,7 @@ async function handleLogout() {
               </router-link>
 
               <router-link
-                to="/pendaki"
+                to="/pendaki/orders"
                 class="flex items-center gap-2.5 px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-colors"
                 @click="isUserDropdownOpen = false"
               >
