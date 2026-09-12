@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,9 @@ import {
   QrCode,
   CheckCircle,
   AlertCircle,
+  IdCard,
+  ShieldCheck,
+  Loader2,
 } from 'lucide-vue-next'
 import type { MitraPesanan, DetailPesananItem, ItemOperationalStatus } from '@/types/order'
 import mitraOrdersApi from '@/api/mitraOrders'
@@ -49,6 +52,84 @@ const updatingItemId = ref<number | null>(null)
 const itemActionMessage = ref<string | null>(null)
 const itemActionError = ref<string | null>(null)
 
+// KTP preview modal state
+const isKtpModalOpen = ref(false)
+const isLoadingKtp = ref(false)
+const ktpImageUrl = ref<string | null>(null)
+const ktpError = ref<string | null>(null)
+
+const climberName = computed(() => props.order?.user?.name || '-')
+const climberPhone = computed(() => {
+  return (
+    props.order?.user?.pendaki?.telepon ||
+    props.order?.anggotas?.[0]?.telepon ||
+    props.order?.user?.telepon ||
+    '-'
+  )
+})
+const climberNik = computed(() => {
+  return (
+    props.order?.user?.pendaki?.nomor_identitas ||
+    props.order?.user?.pendaki?.nik ||
+    props.order?.anggotas?.[0]?.nik_identitas ||
+    props.order?.anggotas?.[0]?.identitas_nomor ||
+    '-'
+  )
+})
+const climberEmergencyContact = computed(() => {
+  const p = props.order?.user?.pendaki
+  const emergencyName = p?.nama_kontak_darurat || p?.kontak_darurat_nama
+  const emergencyHub = p?.hubungan_darurat || p?.kontak_darurat_hubungan
+  const emergencyPhone = p?.telepon_darurat || p?.kontak_darurat_no
+  if (emergencyName) {
+    const hub = emergencyHub ? ` (${emergencyHub})` : ''
+    const no = emergencyPhone ? ` • ${emergencyPhone}` : ''
+    return `${emergencyName}${hub}${no}`
+  }
+  const a = props.order?.anggotas?.[0]
+  if (a?.telepon_darurat) {
+    const hub = a.hubungan_darurat ? ` (${a.hubungan_darurat})` : ''
+    return `${a.telepon_darurat}${hub}`
+  }
+  return '-'
+})
+const climberKycStatus = computed(() => {
+  return props.order?.user?.pendaki?.status_verifikasi || props.order?.user?.pendaki?.status_kyc || null
+})
+
+const totalPendakiSummary = computed(() => {
+  const count = props.order?.anggotas?.length ?? 0
+  if (count <= 0) {
+    return '1 Orang (Ketua)'
+  }
+  if (count === 1) {
+    return '1 Orang (Ketua Rombongan)'
+  }
+  return `${count} Orang (1 Ketua + ${count - 1} Anggota)`
+})
+
+async function handleViewKtp() {
+  if (!props.order) return
+  isKtpModalOpen.value = true
+  ktpError.value = null
+
+  if (ktpImageUrl.value) return
+
+  isLoadingKtp.value = true
+  try {
+    const blob = await mitraOrdersApi.downloadClimberKtp(props.order.id)
+    ktpImageUrl.value = URL.createObjectURL(blob)
+  } catch (err) {
+    ktpError.value = getApiErrorMessage(err, 'Foto identitas/KTP tidak dapat dimuat atau belum diunggah oleh pendaki.')
+  } finally {
+    isLoadingKtp.value = false
+  }
+}
+
+function handleCloseKtpModal() {
+  isKtpModalOpen.value = false
+}
+
 watch(
   () => props.isOpen,
   (open) => {
@@ -56,7 +137,25 @@ watch(
       activeTab.value = 'manifest'
       itemActionMessage.value = null
       itemActionError.value = null
+    } else {
+      if (ktpImageUrl.value) {
+        URL.revokeObjectURL(ktpImageUrl.value)
+        ktpImageUrl.value = null
+      }
+      isKtpModalOpen.value = false
+      ktpError.value = null
     }
+  }
+)
+
+watch(
+  () => props.order?.id,
+  () => {
+    if (ktpImageUrl.value) {
+      URL.revokeObjectURL(ktpImageUrl.value)
+      ktpImageUrl.value = null
+    }
+    ktpError.value = null
   }
 )
 
@@ -178,37 +277,80 @@ function getItemStatusClass(status: ItemOperationalStatus): string {
       </div>
 
       <div v-if="props.order" class="space-y-4 py-2">
-        <!-- Ketua Rombongan Info Box -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 bg-stone-50 rounded-xl border border-stone-200">
-          <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-lg bg-white border border-stone-200 text-stone-600 flex items-center justify-center shrink-0">
-              <User class="w-4 h-4" />
+        <!-- Data Pemesan & Rombongan Info Box -->
+        <div class="p-4 bg-stone-50 rounded-2xl border border-stone-200 space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-stone-200/80">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-stone-600">Data Pemesan / Penanggung Jawab</span>
+              <span
+                v-if="climberKycStatus === 'verified' || climberKycStatus === 'approved'"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"
+              >
+                <ShieldCheck class="w-3 h-3 text-emerald-700" />
+                KYC Terverifikasi
+              </span>
             </div>
-            <div>
-              <span class="text-[10px] uppercase font-bold text-stone-400">Ketua Rombongan</span>
-              <p class="text-xs font-bold text-stone-900">{{ props.order.user?.name || '-' }}</p>
-            </div>
+
+            <!-- Tombol Lihat KTP -->
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              class="h-8 px-3 rounded-lg border-[#1E3A2B]/30 text-[#1E3A2B] hover:bg-[#1E3A2B]/10 font-bold text-xs gap-1.5 self-start sm:self-auto cursor-pointer"
+              @click="handleViewKtp"
+            >
+              <IdCard class="w-3.5 h-3.5 text-[#1E3A2B]" />
+              Lihat Foto KTP
+            </Button>
           </div>
 
-          <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-lg bg-white border border-stone-200 text-stone-600 flex items-center justify-center shrink-0">
-              <Phone class="w-4 h-4" />
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <!-- Nama & NIK -->
+            <div class="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-stone-200/80">
+              <div class="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center shrink-0 mt-0.5">
+                <User class="w-4 h-4" />
+              </div>
+              <div class="min-w-0">
+                <span class="text-[10px] uppercase font-bold text-stone-400 block">Nama & NIK</span>
+                <p class="text-xs font-bold text-stone-900 truncate">{{ climberName }}</p>
+                <p class="text-[11px] font-mono text-stone-600 truncate">{{ climberNik }}</p>
+              </div>
             </div>
-            <div>
-              <span class="text-[10px] uppercase font-bold text-stone-400">Kontak Telepon</span>
-              <p class="text-xs font-bold text-stone-900">{{ props.order.user?.telepon || '-' }}</p>
-            </div>
-          </div>
 
-          <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-lg bg-white border border-stone-200 text-stone-600 flex items-center justify-center shrink-0">
-              <Users class="w-4 h-4" />
+            <!-- Telepon -->
+            <div class="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-stone-200/80">
+              <div class="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center shrink-0 mt-0.5">
+                <Phone class="w-4 h-4" />
+              </div>
+              <div class="min-w-0">
+                <span class="text-[10px] uppercase font-bold text-stone-400 block">Kontak Telepon</span>
+                <p class="text-xs font-bold text-stone-900 truncate">{{ climberPhone }}</p>
+                <p class="text-[11px] text-stone-500 truncate">{{ props.order.user?.email || '-' }}</p>
+              </div>
             </div>
-            <div>
-              <span class="text-[10px] uppercase font-bold text-stone-400">Jumlah Pendaki</span>
-              <p class="text-xs font-bold text-stone-900">
-                {{ (props.order.anggotas?.length ?? 0) + 1 }} Orang (1 Ketua + {{ props.order.anggotas?.length ?? 0 }} Anggota)
-              </p>
+
+            <!-- Kontak Darurat -->
+            <div class="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-stone-200/80">
+              <div class="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center shrink-0 mt-0.5">
+                <AlertCircle class="w-4 h-4" />
+              </div>
+              <div class="min-w-0">
+                <span class="text-[10px] uppercase font-bold text-stone-400 block">Kontak Darurat</span>
+                <p class="text-xs font-bold text-stone-900 truncate" :title="climberEmergencyContact">
+                  {{ climberEmergencyContact }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Total Pendaki -->
+            <div class="flex items-start gap-2.5 bg-white p-2.5 rounded-xl border border-stone-200/80">
+              <div class="w-8 h-8 rounded-lg bg-stone-100 text-stone-600 flex items-center justify-center shrink-0 mt-0.5">
+                <Users class="w-4 h-4" />
+              </div>
+              <div class="min-w-0">
+                <span class="text-[10px] uppercase font-bold text-stone-400 block">Jumlah Pendaki</span>
+                <p class="text-xs font-bold text-stone-900">{{ totalPendakiSummary }}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -255,7 +397,23 @@ function getItemStatusClass(status: ItemOperationalStatus): string {
 
         <!-- Tab 1: Manifes Anggota Pendaki -->
         <div v-if="activeTab === 'manifest'" class="space-y-3">
-          <div v-if="!props.order.anggotas || props.order.anggotas.length === 0" class="text-center py-6 text-stone-400 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-semibold text-stone-600">
+              Daftar Peserta Rombongan ({{ props.order.anggotas?.length ?? 0 }} Terdaftar)
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              class="h-7 text-xs text-[#1E3A2B] hover:bg-[#1E3A2B]/10 gap-1.5 font-semibold"
+              @click="handleViewKtp"
+            >
+              <IdCard class="w-3.5 h-3.5" />
+              Lihat KTP Pemesan
+            </Button>
+          </div>
+
+          <div v-if="!props.order.anggotas || props.order.anggotas.length === 0" class="text-center py-8 bg-stone-50 rounded-xl border border-stone-200 text-stone-400 text-xs">
             Tidak ada anggota rombongan tambahan (Hanya ketua rombongan).
           </div>
           <div v-else class="border border-stone-200 rounded-xl overflow-hidden">
@@ -275,19 +433,32 @@ function getItemStatusClass(status: ItemOperationalStatus): string {
                   class="hover:bg-stone-50/50"
                 >
                   <td class="p-3 font-semibold text-stone-900">
-                    {{ anggota.nama_anggota }}
+                    <div class="flex items-center gap-1.5">
+                      <span>{{ anggota.nama_anggota }}</span>
+                      <span
+                        v-if="idx === 0"
+                        class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200"
+                      >
+                        Ketua
+                      </span>
+                    </div>
                   </td>
                   <td class="p-3 text-stone-600">
                     <span class="uppercase text-[10px] font-bold text-stone-500 mr-1">
                       {{ anggota.identitas_tipe || 'KTP' }}:
                     </span>
-                    {{ anggota.identitas_nomor || '-' }}
+                    <span class="font-mono">{{ anggota.nik_identitas || anggota.identitas_nomor || '-' }}</span>
                   </td>
                   <td class="p-3 text-stone-600 capitalize">
-                    {{ anggota.jenis_kelamin || '-' }}
+                    {{ anggota.jenis_kelamin === 'L' ? 'Laki-laki' : (anggota.jenis_kelamin === 'P' ? 'Perempuan' : (anggota.jenis_kelamin || '-')) }}
                   </td>
                   <td class="p-3 text-stone-600">
-                    {{ anggota.telepon_darurat || '-' }}
+                    <div>
+                      <span>{{ anggota.telepon_darurat || '-' }}</span>
+                      <span v-if="anggota.hubungan_darurat" class="block text-[11px] text-stone-400">
+                        ({{ anggota.hubungan_darurat }})
+                      </span>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -372,6 +543,67 @@ function getItemStatusClass(status: ItemOperationalStatus): string {
           variant="outline"
           class="rounded-xl border-stone-200 text-stone-700 min-h-[44px]"
           @click="handleClose"
+        >
+          Tutup
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  <!-- Dialog Preview Foto KTP Pendaki -->
+  <Dialog :open="isKtpModalOpen" @update:open="handleCloseKtpModal">
+    <DialogContent class="sm:max-w-lg bg-white rounded-2xl p-6">
+      <DialogHeader>
+        <div class="flex items-center gap-2.5 border-b border-stone-200 pb-3">
+          <div class="w-9 h-9 rounded-lg bg-[#1E3A2B]/10 text-[#1E3A2B] flex items-center justify-center shrink-0">
+            <IdCard class="w-5 h-5" />
+          </div>
+          <div>
+            <DialogTitle class="text-base font-bold text-stone-900">
+              Dokumen KTP Pendaki
+            </DialogTitle>
+            <DialogDescription class="text-xs text-stone-500">
+              {{ climberName }} • NIK: {{ climberNik }}
+            </DialogDescription>
+          </div>
+        </div>
+      </DialogHeader>
+
+      <!-- Loading state -->
+      <div v-if="isLoadingKtp" class="flex flex-col items-center justify-center py-12 space-y-3">
+        <Loader2 class="w-8 h-8 text-[#1E3A2B] animate-spin" />
+        <span class="text-xs text-stone-500 font-medium">Memuat berkas KTP dari server...</span>
+      </div>
+
+      <!-- Error state -->
+      <div
+        v-else-if="ktpError"
+        class="p-4 bg-red-50 text-red-800 rounded-xl text-xs font-medium border border-red-200 flex items-center gap-3 my-4"
+      >
+        <AlertCircle class="w-5 h-5 text-red-600 shrink-0" />
+        <span>{{ ktpError }}</span>
+      </div>
+
+      <!-- Image preview -->
+      <div v-else-if="ktpImageUrl" class="mt-3 flex flex-col items-center">
+        <div class="w-full bg-stone-100 rounded-xl overflow-hidden border border-stone-200 flex items-center justify-center max-h-[380px]">
+          <img
+            :src="ktpImageUrl"
+            alt="Foto KTP Pendaki"
+            class="w-full h-auto object-contain max-h-[380px]"
+          />
+        </div>
+        <p class="text-[11px] text-stone-400 mt-2 text-center">
+          Periksa kecocokan NIK, Nama, dan Foto fisik pemesan saat check-in di pos basecamp.
+        </p>
+      </div>
+
+      <DialogFooter class="pt-3 border-t border-stone-200 flex justify-end">
+        <Button
+          type="button"
+          variant="outline"
+          class="rounded-xl border-stone-200 text-stone-700 min-h-[40px]"
+          @click="handleCloseKtpModal"
         >
           Tutup
         </Button>

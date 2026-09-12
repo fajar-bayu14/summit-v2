@@ -7,6 +7,7 @@ import type { MitraPesanan } from '@/types/order'
 vi.mock('@/api/mitraOrders', () => ({
   default: {
     updateItemStatus: vi.fn(),
+    downloadClimberKtp: vi.fn(),
   },
 }))
 
@@ -24,6 +25,16 @@ describe('Mitra Order Detail Component (Task 4.2)', () => {
       name: 'Bayu Pendaki',
       email: 'bayu@example.com',
       telepon: '08123456789',
+      pendaki: {
+        id: 55,
+        user_id: 5,
+        nik: '3301234567890001',
+        telepon: '08123456789',
+        status_kyc: 'verified',
+        kontak_darurat_nama: 'Ibu Budi',
+        kontak_darurat_no: '081987654321',
+        kontak_darurat_hubungan: 'Orang Tua',
+      },
     },
     gunung_id: 1,
     jalur_id: 2,
@@ -196,5 +207,56 @@ describe('Mitra Order Detail Component (Task 4.2)', () => {
 
     expect(wrapper.emitted('update:isOpen')?.[0]).toEqual([false])
     expect(wrapper.emitted('close')).toBeTruthy()
+  })
+
+  it('should display climber details, NIK, emergency contact, and correct hiker count', () => {
+    const wrapper = mount(OrderDetailDrawer, {
+      props: {
+        isOpen: true,
+        order: mockOrder,
+      },
+    })
+
+    const vm = wrapper.vm as any
+    expect(vm.climberName).toBe('Bayu Pendaki')
+    expect(vm.climberNik).toBe('3301234567890001')
+    expect(vm.climberPhone).toBe('08123456789')
+    expect(vm.climberEmergencyContact).toContain('Ibu Budi')
+    expect(vm.climberEmergencyContact).toContain('Orang Tua')
+    expect(vm.climberKycStatus).toBe('verified')
+    expect(vm.totalPendakiSummary).toBe('2 Orang (1 Ketua + 1 Anggota)')
+
+    expect(document.body.textContent).toContain('Bayu Pendaki')
+  })
+
+  it('should trigger KTP download and open KTP modal on click', async () => {
+    const mockBlob = new Blob(['fake-image-content'], { type: 'image/jpeg' })
+    vi.mocked(mitraOrdersApi.downloadClimberKtp).mockResolvedValueOnce(mockBlob)
+
+    // Mock URL.createObjectURL and revokeObjectURL
+    const originalCreateObjectURL = window.URL.createObjectURL
+    const originalRevokeObjectURL = window.URL.revokeObjectURL
+    window.URL.createObjectURL = vi.fn(() => 'blob:http://localhost:5173/fake-ktp-url')
+    window.URL.revokeObjectURL = vi.fn()
+
+    const wrapper = mount(OrderDetailDrawer, {
+      props: {
+        isOpen: true,
+        order: mockOrder,
+      },
+    })
+
+    const vm = wrapper.vm as any
+    expect(vm.isKtpModalOpen).toBe(false)
+
+    await vm.handleViewKtp()
+
+    expect(mitraOrdersApi.downloadClimberKtp).toHaveBeenCalledWith(101)
+    expect(vm.isKtpModalOpen).toBe(true)
+    expect(vm.ktpImageUrl).toBe('blob:http://localhost:5173/fake-ktp-url')
+
+    // Cleanup
+    window.URL.createObjectURL = originalCreateObjectURL
+    window.URL.revokeObjectURL = originalRevokeObjectURL
   })
 })

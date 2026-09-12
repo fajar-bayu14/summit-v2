@@ -46,9 +46,11 @@ Route::prefix('auth')->group(function () {
     });
 });
 
-// Payment gateway webhooks (public, no auth). Verified via x-callback-token header.
-Route::post('/payments/webhook/xendit', [XenditWebhookController::class, 'handle'])->name('xendit.webhook');
-Route::post('/payments/webhook/xendit-disbursement', [XenditDisbursementWebhookController::class, 'handle'])->name('xendit.disbursement.webhook');
+// Payment gateway webhooks. Guarded by constant-time x-callback-token verification.
+Route::middleware(['xendit.webhook'])->group(function () {
+    Route::post('/payments/webhook/xendit', [XenditWebhookController::class, 'handle'])->name('xendit.webhook');
+    Route::post('/payments/webhook/xendit-disbursement', [XenditDisbursementWebhookController::class, 'handle'])->name('xendit.disbursement.webhook');
+});
 
 // Public Banner Ads endpoints
 Route::get('/ads/banners', [PublicBannerAdController::class, 'index'])->name('ads.banners.index');
@@ -73,6 +75,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/orders', [PendakiPesananController::class, 'store'])->name('pesanan.store');
     Route::get('/orders', [PendakiPesananController::class, 'index'])->name('pesanan.index');
     Route::get('/orders/{invoice}', [PendakiPesananController::class, 'show'])->where('invoice', '[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){0,2}')->name('pesanan.show');
+    Route::post('/orders/{invoice}/check-status', [PendakiPesananController::class, 'checkPaymentStatus'])->where('invoice', '[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){0,2}')->name('pesanan.check-status');
     Route::post('/orders/checkout', [PendakiPesananController::class, 'checkout'])->name('pesanan.checkout');
     Route::post('/orders/{invoice}/cancel', [PendakiPesananController::class, 'cancel'])->where('invoice', '[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){0,2}')->name('pesanan.cancel');
     Route::post('/orders/{invoice}/refund-request', [PendakiRefundController::class, 'store'])->where('invoice', '[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+){0,2}')->name('refund.store');
@@ -201,6 +204,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/orders', [MitraPesananController::class, 'index'])->name('mitra.pesanan.index');
         Route::post('/orders/check-in', [MitraPesananController::class, 'checkInByCode'])->name('mitra.pesanan.check-in-code');
         Route::get('/orders/{id}', [MitraPesananController::class, 'show'])->name('mitra.pesanan.show');
+        Route::get('/orders/{id}/ktp', [MitraPesananController::class, 'viewKycDocument'])->name('mitra.pesanan.ktp');
         Route::post('/orders/{id}/check-in', [MitraPesananController::class, 'checkIn'])->name('mitra.pesanan.check-in');
         Route::patch('/orders/{pesananId}/items/{itemId}', [MitraPesananController::class, 'updateItemStatus'])->name('mitra.pesanan.update-item');
 

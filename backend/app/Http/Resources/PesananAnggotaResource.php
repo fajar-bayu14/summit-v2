@@ -36,6 +36,8 @@ class PesananAnggotaResource extends JsonResource
             'pesanan_id' => $this->pesanan_id,
             'nama_anggota' => $this->nama_anggota,
             'nik_identitas' => $this->nik_identitas,
+            'identitas_nomor' => $this->nik_identitas,
+            'identitas_tipe' => 'KTP',
             'telepon' => $this->telepon,
             'telepon_darurat' => $this->telepon_darurat,
             'hubungan_darurat' => $this->hubungan_darurat,

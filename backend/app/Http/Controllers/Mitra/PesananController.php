@@ -9,7 +9,9 @@ use App\Models\Pesanan;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PesananController extends Controller
 {
@@ -59,7 +61,7 @@ class PesananController extends Controller
         $basecampIds = $mitra->basecamps->pluck('id');
 
         $query = Pesanan::whereIn('basecamp_id', $basecampIds)
-            ->with(['user', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran']);
+            ->with(['user.pendaki', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran']);
 
         // Filters
         if ($request->filled('status')) {
@@ -143,7 +145,7 @@ class PesananController extends Controller
     )]
     public function show(int $id): JsonResponse
     {
-        $pesanan = Pesanan::with(['user', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran'])
+        $pesanan = Pesanan::with(['user.pendaki', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran'])
             ->findOrFail($id);
 
         Gate::authorize('view', $pesanan);
@@ -332,7 +334,37 @@ class PesananController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Check-in berhasil. Rombongan pendaki telah tercatat aktif mendaki.',
-            'data' => new PesananResource($pesanan->fresh(['user', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran'])),
+            'data' => new PesananResource($pesanan->fresh(['user.pendaki', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran'])),
         ]);
+    }
+
+    #[OA\Get(
+        path: '/api/v1/mitra/orders/{id}/ktp',
+        summary: 'View or stream the KYC identity document/KTP of the climber for this order (Mitra)',
+        tags: ['Pesanan (Mitra)'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', description: 'Order ID', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 200, description: 'Streamed KTP file response', content: new OA\MediaType(mediaType: 'image/*')),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden - only for basecamp owner mitra'),
+            new OA\Response(response: 404, description: 'KTP document file not found'),
+        ]
+    )]
+    public function viewKycDocument(int $id): StreamedResponse
+    {
+        $pesanan = Pesanan::with(['basecamp', 'user.pendaki'])->findOrFail($id);
+
+        Gate::authorize('view', $pesanan);
+
+        $pendaki = $pesanan->user?->pendaki;
+
+        if (! $pendaki || ! $pendaki->foto_identitas || ! Storage::disk('local')->exists($pendaki->foto_identitas)) {
+            abort(404, 'Dokumen KTP pendaki tidak ditemukan.');
+        }
+
+        return Storage::disk('local')->response($pendaki->foto_identitas);
     }
 }

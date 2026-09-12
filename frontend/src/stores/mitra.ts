@@ -4,6 +4,7 @@ import apiClient from '@/lib/axios'
 import type { Basecamp } from '@/types/basecamp'
 import type { ApiResponse } from '@/types/api'
 import { getApiErrorMessage } from '@/lib/axios'
+import mitraDashboardApi from '@/api/mitraDashboard'
 
 function getInitialActiveBasecampId(): number | null {
   try {
@@ -17,6 +18,7 @@ function getInitialActiveBasecampId(): number | null {
 export const useMitraStore = defineStore('mitra', () => {
   const basecamps = ref<Basecamp[]>([])
   const activeBasecampId = ref<number | null>(getInitialActiveBasecampId())
+  const incomingOrdersCount = ref<number>(0)
   const isLoading = ref<boolean>(false)
   const error = ref<string | null>(null)
 
@@ -74,9 +76,21 @@ export const useMitraStore = defineStore('mitra', () => {
     }
   }
 
+  async function fetchIncomingOrdersCount(): Promise<number> {
+    try {
+      const response = await mitraDashboardApi.getSummary(activeBasecampId.value)
+      const count = response.data?.action_queues?.pesanan_paid_count ?? 0
+      incomingOrdersCount.value = count
+      return count
+    } catch {
+      return 0
+    }
+  }
+
   function reset(): void {
     basecamps.value = []
     activeBasecampId.value = null
+    incomingOrdersCount.value = 0
     error.value = null
     isLoading.value = false
     localStorage.removeItem('active_basecamp_id')
@@ -85,6 +99,7 @@ export const useMitraStore = defineStore('mitra', () => {
   return {
     basecamps,
     activeBasecampId,
+    incomingOrdersCount,
     isLoading,
     error,
     activeBasecamp,
@@ -94,6 +109,7 @@ export const useMitraStore = defineStore('mitra', () => {
     setActiveBasecamp,
     setBasecamps,
     fetchBasecamps,
+    fetchIncomingOrdersCount,
     reset,
   }
 })

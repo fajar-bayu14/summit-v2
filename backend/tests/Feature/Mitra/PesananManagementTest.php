@@ -9,6 +9,7 @@ use App\Models\Pesanan;
 use App\Models\Produk;
 use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 
 uses(LazilyRefreshDatabase::class);
 
@@ -289,4 +290,68 @@ test('mitra cannot check in booking of another partner basecamp', function () {
         ->postJson(route('mitra.pesanan.check-in', $this->pesananPaidB->id));
 
     $response->assertStatus(403);
+});
+
+test('mitra can view details including climber pendaki profile and member NIK', function () {
+    $this->hiker->pendaki()->create([
+        'nama_lengkap' => 'Climber Satu',
+        'jenis_identitas' => 'ktp',
+        'nomor_identitas' => '3201234567890099',
+        'foto_identitas' => 'kyc_documents/test.jpg',
+        'tanggal_lahir' => '1995-05-12',
+        'jenis_kelamin' => 'l',
+        'alamat' => 'Jl. Pendaki No. 10',
+        'telepon' => '081299990001',
+        'nama_kontak_darurat' => 'Darurat Satu',
+        'telepon_darurat' => '081299990002',
+        'hubungan_darurat' => 'Orang Tua',
+        'status_verifikasi' => 'disetujui',
+    ]);
+
+    $this->pesananPaidA->anggotas()->create([
+        'nama_anggota' => 'Anggota Satu',
+        'nik_identitas' => '3201234567890088',
+        'telepon' => '081299990002',
+        'telepon_darurat' => '081299990003',
+        'hubungan_darurat' => 'Orang Tua',
+    ]);
+
+    $response = $this->actingAs($this->userMitraA)
+        ->getJson(route('mitra.pesanan.show', $this->pesananPaidA->id));
+
+    $response->assertStatus(200)
+        ->assertJsonPath('data.user.pendaki.nomor_identitas', '3201234567890099')
+        ->assertJsonPath('data.user.pendaki.telepon', '081299990001')
+        ->assertJsonPath('data.anggotas.0.nik_identitas', '3201234567890088')
+        ->assertJsonPath('data.anggotas.0.identitas_nomor', '3201234567890088');
+});
+
+test('mitra can stream KTP document of climber who booked their basecamp', function () {
+    Storage::fake('local');
+    Storage::disk('local')->put('kyc_documents/ktp_sample.jpg', 'fake-image-data');
+
+    $this->hiker->pendaki()->create([
+        'nama_lengkap' => 'Climber Satu',
+        'jenis_identitas' => 'ktp',
+        'nomor_identitas' => '3201234567890099',
+        'foto_identitas' => 'kyc_documents/ktp_sample.jpg',
+        'tanggal_lahir' => '1995-05-12',
+        'jenis_kelamin' => 'l',
+        'alamat' => 'Jl. Pendaki No. 10',
+        'telepon' => '081299990001',
+        'nama_kontak_darurat' => 'Darurat Satu',
+        'telepon_darurat' => '081299990002',
+        'hubungan_darurat' => 'Orang Tua',
+        'status_verifikasi' => 'disetujui',
+    ]);
+
+    $response = $this->actingAs($this->userMitraA)
+        ->get(route('mitra.pesanan.ktp', $this->pesananPaidA->id));
+
+    $response->assertStatus(200);
+
+    // Another partner is forbidden
+    $this->actingAs($this->userMitraB)
+        ->get(route('mitra.pesanan.ktp', $this->pesananPaidA->id))
+        ->assertStatus(403);
 });

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useMitraStore } from '@/stores/mitra'
 import { navigationConfig } from '@/config/navigation'
 import BasecampSwitcher from '@/components/mitra/BasecampSwitcher.vue'
 import type { NavGroup, NavItem } from '@/types/navigation'
@@ -33,6 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const authStore = useAuthStore()
+const mitraStore = useMitraStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -50,10 +52,45 @@ const filteredNavigation = computed<NavGroup[]>(() => {
     .filter(group => !group.roles || group.roles.includes(currentRole))
     .map(group => ({
       ...group,
-      items: group.items.filter(item => !item.roles || item.roles.includes(currentRole)),
+      items: group.items
+        .filter(item => !item.roles || item.roles.includes(currentRole))
+        .map(item => {
+          if (item.to === '/mitra/orders' && mitraStore.incomingOrdersCount > 0) {
+            return {
+              ...item,
+              badge: String(mitraStore.incomingOrdersCount),
+              badgeVariant: 'destructive' as const,
+            }
+          }
+          return item
+        }),
     }))
     .filter(group => group.items.length > 0)
 })
+
+onMounted(() => {
+  if (authStore.isMitra) {
+    mitraStore.fetchIncomingOrdersCount()
+  }
+})
+
+watch(
+  () => mitraStore.activeBasecampId,
+  (newVal, oldVal) => {
+    if (authStore.isMitra && newVal !== oldVal) {
+      mitraStore.fetchIncomingOrdersCount()
+    }
+  }
+)
+
+watch(
+  () => route.path,
+  (path) => {
+    if (authStore.isMitra && (path === '/mitra/orders' || path === '/mitra')) {
+      mitraStore.fetchIncomingOrdersCount()
+    }
+  }
+)
 
 // Role badge visual styling
 const roleBadgeInfo = computed(() => {
@@ -169,10 +206,17 @@ async function handleLogout() {
               <Badge
                 v-if="item.badge && !isSidebarCollapsed"
                 :variant="item.badgeVariant || 'secondary'"
-                class="text-[10px] px-1.5 py-0 ml-auto"
+                class="text-[10px] px-1.5 py-0 ml-auto font-semibold"
+                role="status"
+                :aria-label="`${item.badge} pesanan masuk`"
               >
                 {{ item.badge }}
               </Badge>
+              <span
+                v-if="item.badge && isSidebarCollapsed"
+                class="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-card animate-pulse"
+                :title="`${item.badge} pesanan masuk`"
+              />
             </router-link>
           </div>
         </div>
@@ -277,7 +321,9 @@ async function handleLogout() {
               <Badge
                 v-if="item.badge"
                 :variant="item.badgeVariant || 'secondary'"
-                class="text-[10px]"
+                class="text-[10px] px-1.5 py-0 font-semibold"
+                role="status"
+                :aria-label="`${item.badge} pesanan masuk`"
               >
                 {{ item.badge }}
               </Badge>
@@ -340,10 +386,27 @@ async function handleLogout() {
             />
           </div>
 
-          <!-- Notification Trigger -->
-          <Button variant="ghost" size="icon" class="relative rounded-full h-9 w-9">
+          <!-- Notification Trigger / Link to orders for Mitra -->
+          <Button
+            variant="ghost"
+            size="icon"
+            class="relative rounded-full h-9 w-9"
+            :title="authStore.isMitra && mitraStore.incomingOrdersCount > 0 ? `${mitraStore.incomingOrdersCount} pesanan masuk perlu diproses` : 'Notifikasi'"
+            @click="authStore.isMitra ? router.push('/mitra/orders') : null"
+          >
             <Bell class="h-4 w-4 text-muted-foreground" />
-            <span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-600 animate-pulse" />
+            <span
+              v-if="authStore.isMitra && mitraStore.incomingOrdersCount > 0"
+              class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-background animate-pulse"
+              role="status"
+              :aria-label="`${mitraStore.incomingOrdersCount} pesanan masuk`"
+            >
+              {{ mitraStore.incomingOrdersCount > 99 ? '99+' : mitraStore.incomingOrdersCount }}
+            </span>
+            <span
+              v-else
+              class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-600 animate-pulse"
+            />
           </Button>
 
           <!-- User Dropdown in Header -->

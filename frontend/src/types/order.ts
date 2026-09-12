@@ -17,10 +17,13 @@ export interface PesananAnggota {
   id: number
   pesanan_id: number
   nama_anggota: string
+  nik_identitas?: string | null
   identitas_tipe?: string | null
   identitas_nomor?: string | null
-  jenis_kelamin?: string | null
+  telepon?: string | null
   telepon_darurat?: string | null
+  hubungan_darurat?: string | null
+  jenis_kelamin?: string | null
   alamat?: string | null
   created_at?: string
   updated_at?: string
@@ -47,6 +50,28 @@ export interface DetailPesananItem {
   updated_at?: string
 }
 
+export interface ClimberKycProfile {
+  id: number
+  user_id: number
+  nama_lengkap: string
+  jenis_identitas: string
+  nomor_identitas: string
+  nik?: string | null
+  foto_identitas?: string | null
+  tanggal_lahir?: string | null
+  jenis_kelamin?: string | null
+  alamat?: string | null
+  telepon?: string | null
+  nama_kontak_darurat?: string | null
+  telepon_darurat?: string | null
+  hubungan_darurat?: string | null
+  status_verifikasi?: string
+  kontak_darurat_nama?: string | null
+  kontak_darurat_no?: string | null
+  kontak_darurat_hubungan?: string | null
+  status_kyc?: string | null
+}
+
 export interface MitraPesanan {
   id: number
   invoice: string
@@ -63,6 +88,7 @@ export interface MitraPesanan {
     name: string
     email?: string
     telepon?: string | null
+    pendaki?: ClimberKycProfile | null
   } | null
   basecamp?: {
     id: number

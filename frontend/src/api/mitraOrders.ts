@@ -67,6 +67,16 @@ export const mitraOrdersApi = {
     )
     return response.data
   },
+
+  /**
+   * Mengunduh / mengambil berkas stream foto KTP pendaki untuk verifikasi pos basecamp
+   */
+  async downloadClimberKtp(id: number): Promise<Blob> {
+    const response = await apiClient.get<Blob>(`/mitra/orders/${id}/ktp`, {
+      responseType: 'blob',
+    })
+    return response.data
+  },
 }
 
 export default mitraOrdersApi
