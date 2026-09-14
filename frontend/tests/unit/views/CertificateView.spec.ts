@@ -69,4 +69,67 @@ describe('CertificateView Component (Task 7.3)', () => {
     expect(wrapper.text()).toContain('3.428 MDPL')
     expect(wrapper.text()).toContain('Pak Slamet (Petugas)')
   })
+
+  it('should render upload logbook form when logbook is not yet submitted', async () => {
+    vi.mocked(pendakiLogbookApi.getLogbook).mockRejectedValueOnce({
+      response: {
+        status: 404,
+        data: { message: 'Logbook belum diunggah untuk pesanan ini.' },
+      },
+    })
+
+    const wrapper = mount(CertificateView, {
+      global: {
+        stubs: {
+          'router-link': { template: '<a><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Unggah Bukti Puncak (Summit Proof)')
+    expect(wrapper.text()).toContain('Kirim Laporan Logbook')
+    expect(wrapper.find('input[type="file"]').exists()).toBe(true)
+  })
+
+  it('should render pending validation banner when logbook is pending', async () => {
+    const mockPendingLogbook = {
+      id: 2,
+      pesanan_id: 11,
+      invoice: 'INV/20260710/ABC12',
+      user_id: 1,
+      nama_pendaki: 'Fajar Bayu',
+      gunung_nama: 'Gunung Slamet',
+      jalur_nama: 'Jalur Bambangan',
+      tinggi_mdpl: 3428,
+      foto_summit: 'http://localhost:8000/storage/summit.jpg',
+      latitude: '-7.24',
+      longitude: '109.21',
+      waktu_summit: '2026-07-15T06:00:00Z',
+      catatan_pendaki: 'Puncak cerah',
+      status_validasi: 'pending' as const,
+      catatan_petugas: null,
+      validated_at: null,
+      validated_by: null,
+      certificate_url: null,
+      created_at: '2026-07-15T07:00:00Z',
+    }
+
+    vi.mocked(pendakiLogbookApi.getLogbook).mockResolvedValueOnce({
+      status: 'success',
+      data: mockPendingLogbook,
+    })
+
+    const wrapper = mount(CertificateView, {
+      global: {
+        stubs: {
+          'router-link': { template: '<a><slot /></a>' },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Menunggu Validasi Basecamp')
+    expect(wrapper.text()).toContain('Laporan Bukti Summit Berhasil Dikirim!')
+  })
 })

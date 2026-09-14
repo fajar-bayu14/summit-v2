@@ -215,6 +215,32 @@ async function handleCheckInOrder(order: MitraPesanan) {
   }
 }
 
+async function handleCheckOutOrder(order: MitraPesanan) {
+  if (
+    !confirm(
+      `Apakah Anda yakin ingin menyelesaikan pendakian (Check-Out) untuk invoice ${order.invoice}? Tindakan ini akan menyelesaikan status pesanan dan mencairkan dana escrow ke saldo aktif mitra.`
+    )
+  ) {
+    return
+  }
+
+  try {
+    await mitraOrdersApi.checkOutOrder(order.id)
+    const target = orders.value.find((o) => o.id === order.id)
+    if (target) {
+      target.status = 'completed'
+      target.status_escrow = 'released'
+    }
+    if (selectedOrder.value && selectedOrder.value.id === order.id) {
+      selectedOrder.value.status = 'completed'
+      selectedOrder.value.status_escrow = 'released'
+    }
+    await fetchOrders()
+  } catch (err) {
+    errorMessage.value = getApiErrorMessage(err, 'Gagal memproses check-out pendakian.')
+  }
+}
+
 function handleItemStatusUpdated(payload: { item: DetailPesananItem; status: ItemOperationalStatus }) {
   if (selectedOrder.value?.details) {
     const itm = selectedOrder.value.details.find((d) => d.id === payload.item.id)
@@ -490,6 +516,16 @@ function handleCheckedInFromScanner(_order?: MitraPesanan) {
                   </Button>
 
                   <Button
+                    v-if="order.status === 'on_going'"
+                    size="sm"
+                    class="h-8 px-2.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold shadow-xs"
+                    @click="handleCheckOutOrder(order)"
+                  >
+                    <CheckCircle2 class="w-3.5 h-3.5 mr-1" />
+                    Check-Out
+                  </Button>
+
+                  <Button
                     variant="outline"
                     size="sm"
                     class="h-8 px-2.5 rounded-lg border-stone-200 text-stone-700 hover:bg-stone-100 text-xs font-semibold"
@@ -547,6 +583,7 @@ function handleCheckedInFromScanner(_order?: MitraPesanan) {
       v-model:is-open="isDetailDrawerOpen"
       :order="selectedOrder"
       @check-in="handleCheckInOrder"
+      @check-out="handleCheckOutOrder"
       @item-status-updated="handleItemStatusUpdated"
     />
 

@@ -36,6 +36,21 @@ export interface MitraAnalyticsSummary {
   resources: ResourcesSummary
 }
 
+export interface AdminActionQueuesSummary {
+  kyc_pending_count: number
+  withdrawal_pending_count: number
+  refund_pending_count: number
+}
+
+export interface AdminAnalyticsSummary {
+  action_queues: AdminActionQueuesSummary
+  total_pending: number
+  overview: {
+    total_gunung: number
+    total_mitra: number
+  }
+}
+
 export interface EmergencyTrailPayload {
   status: 'open' | 'close'
   alasan_penutupan?: string

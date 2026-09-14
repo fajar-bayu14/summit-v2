@@ -77,6 +77,16 @@ export const mitraOrdersApi = {
     })
     return response.data
   },
+
+  /**
+   * Eksekusi check-out & penyelesaian pendakian rombongan pendaki (rilis saldo escrow ke saldo aktif)
+   */
+  async checkOutOrder(id: number): Promise<ApiResponse<MitraPesanan>> {
+    const response = await apiClient.post<ApiResponse<MitraPesanan>>(
+      `/mitra/orders/${id}/check-out`
+    )
+    return response.data
+  },
 }
 
 export default mitraOrdersApi

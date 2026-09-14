@@ -34,8 +34,10 @@ export interface DetailPesananItem {
   pesanan_id: number
   produk_id: number
   nama_produk: string
-  harga_satuan: number
-  kuantitas: number
+  harga_satuan?: number
+  harga?: number
+  kuantitas?: number
+  qty?: number
   subtotal: number
   status_operasional: ItemOperationalStatus
   catatan_opsional?: string | null
@@ -83,6 +85,7 @@ export interface MitraPesanan {
   total_bayar: number
   pendapatan_mitra?: number
   status: PesananStatus
+  status_escrow?: string | null
   user?: {
     id: number
     name: string

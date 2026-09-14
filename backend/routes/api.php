@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AnalyticsController as AdminAnalyticsController;
 use App\Http\Controllers\Admin\BannerAdController as AdminBannerAdController;
 use App\Http\Controllers\Admin\BasecampController as AdminBasecampController;
 use App\Http\Controllers\Admin\GunungController as AdminGunungController;
@@ -104,6 +105,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Admin endpoints (guarded by role:admin)
     Route::middleware(['role:admin'])->prefix('admin')->group(function () {
+        // Analytics & Notification Center queues (Admin)
+        Route::get('/analytics/summary', [AdminAnalyticsController::class, 'summary'])->name('admin.analytics.summary');
+
         // KYC management
         Route::get('/kyc', [AdminKycController::class, 'index'])->name('admin.kyc.index');
         Route::get('/kyc/{id}', [AdminKycController::class, 'show'])->name('admin.kyc.show');
@@ -206,6 +210,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/orders/{id}', [MitraPesananController::class, 'show'])->name('mitra.pesanan.show');
         Route::get('/orders/{id}/ktp', [MitraPesananController::class, 'viewKycDocument'])->name('mitra.pesanan.ktp');
         Route::post('/orders/{id}/check-in', [MitraPesananController::class, 'checkIn'])->name('mitra.pesanan.check-in');
+        Route::post('/orders/{id}/check-out', [MitraPesananController::class, 'checkOut'])->name('mitra.pesanan.check-out');
         Route::patch('/orders/{pesananId}/items/{itemId}', [MitraPesananController::class, 'updateItemStatus'])->name('mitra.pesanan.update-item');
 
         // Refund Management for Mitra (Tier-1 Review)

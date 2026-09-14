@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PesananResource;
 use App\Models\DetailPesanan;
 use App\Models\Pesanan;
+use App\Services\EscrowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use OpenApi\Attributes as OA;
@@ -334,6 +336,76 @@ class PesananController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Check-in berhasil. Rombongan pendaki telah tercatat aktif mendaki.',
+            'data' => new PesananResource($pesanan->fresh(['user.pendaki', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran'])),
+        ]);
+    }
+
+    #[OA\Post(
+        path: '/api/v1/mitra/orders/{id}/check-out',
+        summary: 'Check out and complete a climber hiking order at basecamp (Mitra)',
+        description: 'Completes active hiking order, sets operational items to completed, and releases escrow balance to partner available balance',
+        tags: ['Pesanan (Mitra)'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', description: 'Order (Pesanan) ID', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Order checked out and completed successfully, escrow released',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'status', type: 'string', example: 'success'),
+                        new OA\Property(property: 'message', type: 'string', example: 'Check-out berhasil. Pendakian telah selesai dan dana escrow telah dicairkan ke saldo aktif mitra.'),
+                        new OA\Property(property: 'data', ref: '#/components/schemas/PesananResource'),
+                    ]
+                )
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 404, description: 'Order not found'),
+            new OA\Response(response: 422, description: 'Order not eligible for check-out'),
+        ]
+    )]
+    public function checkOut(int $id, EscrowService $escrowService): JsonResponse
+    {
+        $pesanan = Pesanan::with(['user.pendaki', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran'])
+            ->findOrFail($id);
+
+        Gate::authorize('update', $pesanan);
+
+        if ($pesanan->status === 'completed') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Pesanan ini sudah diselesaikan sebelumnya.',
+            ], 422);
+        }
+
+        if ($pesanan->status !== 'on_going') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Hanya pesanan berstatus on_going (sedang aktif mendaki) yang dapat di-check out / diselesaikan.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($pesanan, $escrowService) {
+            $pesanan->update([
+                'status' => 'completed',
+                'status_escrow' => 'released',
+            ]);
+
+            // Complete operational items (unless already cancelled)
+            $pesanan->details()
+                ->where('status_operasional', '!=', 'cancelled')
+                ->update(['status_operasional' => 'completed']);
+
+            // Release escrow funds to available balance
+            $escrowService->releaseEscrowToAvailable($pesanan);
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Check-out berhasil. Pendakian telah selesai dan dana escrow telah dicairkan ke saldo aktif mitra.',
             'data' => new PesananResource($pesanan->fresh(['user.pendaki', 'basecamp', 'jalur', 'anggotas', 'details.produk', 'pembayaran'])),
         ]);
     }

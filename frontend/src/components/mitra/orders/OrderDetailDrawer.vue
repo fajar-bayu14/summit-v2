@@ -43,6 +43,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'update:isOpen', value: boolean): void
   (e: 'checkIn', order: MitraPesanan): void
+  (e: 'checkOut', order: MitraPesanan): void
   (e: 'itemStatusUpdated', payload: { item: DetailPesananItem; status: ItemOperationalStatus }): void
   (e: 'close'): void
 }>()
@@ -130,6 +131,16 @@ function handleCloseKtpModal() {
   isKtpModalOpen.value = false
 }
 
+function handleTriggerCheckIn() {
+  if (!props.order) return
+  emit('checkIn', props.order)
+}
+
+function handleTriggerCheckOut() {
+  if (!props.order) return
+  emit('checkOut', props.order)
+}
+
 watch(
   () => props.isOpen,
   (open) => {
@@ -195,12 +206,6 @@ async function handleUpdateItemStatus(item: DetailPesananItem, newStatus: ItemOp
     itemActionError.value = getApiErrorMessage(err, 'Gagal mengubah status item.')
   } finally {
     updatingItemId.value = null
-  }
-}
-
-function handleTriggerCheckIn() {
-  if (props.order) {
-    emit('checkIn', props.order)
   }
 }
 
@@ -483,10 +488,10 @@ function getItemStatusClass(status: ItemOperationalStatus): string {
                 </div>
                 <div>
                   <div class="font-bold text-stone-900 text-xs">
-                    {{ item.nama_produk }}
+                    {{ item.nama_produk || item.produk?.nama_produk || 'Tiket / Perlengkapan' }}
                   </div>
                   <div class="text-[11px] text-stone-500">
-                    {{ item.kuantitas }}x @ {{ formatRupiah(item.harga_satuan) }} =
+                    {{ item.kuantitas ?? item.qty ?? 1 }}x @ {{ formatRupiah(item.harga_satuan ?? item.harga ?? (item.subtotal ? item.subtotal / (item.kuantitas ?? item.qty ?? 1) : 0)) }} =
                     <strong class="text-stone-800">{{ formatRupiah(item.subtotal) }}</strong>
                   </div>
                 </div>
@@ -545,6 +550,26 @@ function getItemStatusClass(status: ItemOperationalStatus): string {
           @click="handleClose"
         >
           Tutup
+        </Button>
+
+        <Button
+          v-if="props.order?.status === 'paid'"
+          type="button"
+          class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold min-h-[44px] gap-2 shadow-sm"
+          @click="handleTriggerCheckIn"
+        >
+          <QrCode class="w-4 h-4" />
+          <span>Check-In Rombongan</span>
+        </Button>
+
+        <Button
+          v-if="props.order?.status === 'on_going'"
+          type="button"
+          class="rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold min-h-[44px] gap-2 shadow-sm"
+          @click="handleTriggerCheckOut"
+        >
+          <CheckCircle class="w-4 h-4" />
+          <span>Selesaikan Pendakian (Check-Out)</span>
         </Button>
       </DialogFooter>
     </DialogContent>

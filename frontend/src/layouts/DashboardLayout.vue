@@ -5,13 +5,13 @@ import { useAuthStore } from '@/stores/auth'
 import { useMitraStore } from '@/stores/mitra'
 import { navigationConfig } from '@/config/navigation'
 import BasecampSwitcher from '@/components/mitra/BasecampSwitcher.vue'
+import { NotificationDropdown } from '@/components/common'
 import type { NavGroup, NavItem } from '@/types/navigation'
 import {
   Mountain,
   Menu,
   X,
   Search,
-  Bell,
   ChevronDown,
   LogOut,
   User as UserIcon,
@@ -386,28 +386,8 @@ async function handleLogout() {
             />
           </div>
 
-          <!-- Notification Trigger / Link to orders for Mitra -->
-          <Button
-            variant="ghost"
-            size="icon"
-            class="relative rounded-full h-9 w-9"
-            :title="authStore.isMitra && mitraStore.incomingOrdersCount > 0 ? `${mitraStore.incomingOrdersCount} pesanan masuk perlu diproses` : 'Notifikasi'"
-            @click="authStore.isMitra ? router.push('/mitra/orders') : null"
-          >
-            <Bell class="h-4 w-4 text-muted-foreground" />
-            <span
-              v-if="authStore.isMitra && mitraStore.incomingOrdersCount > 0"
-              class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-rose-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-background animate-pulse"
-              role="status"
-              :aria-label="`${mitraStore.incomingOrdersCount} pesanan masuk`"
-            >
-              {{ mitraStore.incomingOrdersCount > 99 ? '99+' : mitraStore.incomingOrdersCount }}
-            </span>
-            <span
-              v-else
-              class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-emerald-600 animate-pulse"
-            />
-          </Button>
+          <!-- Notification Center Dropdown -->
+          <NotificationDropdown />
 
           <!-- User Dropdown in Header -->
           <DropdownMenu>
