@@ -136,18 +136,29 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (Throwable $e, Request $request) {
+            \Illuminate\Support\Facades\Log::error('Unhandled Exception: '.$e->getMessage(), [
+                'exception_class' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             if ($request->is('api/documentation*', 'docs*')) {
                 return null;
             }
 
             $statusCode = method_exists($e, 'getStatusCode') ? $e->getStatusCode() : 500;
-            $message = config('app.debug') ? $e->getMessage() : 'Terjadi kesalahan pada server. Mohon hubungi admin.';
 
             return response()->json([
                 'status' => 'error',
-                'message' => $message,
+                'message' => $e->getMessage() ?: 'Terjadi kesalahan pada server.',
                 'error_code' => 'ERR_INTERNAL_SERVER',
-                'debug' => config('app.debug') ? $e->getTraceAsString() : null,
+                'error_details' => [
+                    'exception' => get_class($e),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                ],
+                'debug' => $e->getTraceAsString(),
             ], $statusCode);
         });
     })->create();
